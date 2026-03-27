@@ -5,9 +5,12 @@ export const renderLogin = (container) => {
     container.innerHTML = `
         <div class="auth-container fade-in">
             <div class="auth-card">
-                <div style="text-align: center; margin-bottom: 2rem;">
+                <div style="text-align: center; margin-bottom: 2rem; position: relative;">
+                    <a href="#/" style="position: absolute; top: 0; left: 0; font-size: 0.85rem; color: var(--text-muted); display: flex; align-items: center; gap: 6px; font-weight: 600; transition: 0.2s;" onmouseover="this.style.color='var(--brand-orange)'" onmouseout="this.style.color='var(--text-muted)'">
+                        <i class="fas fa-arrow-left"></i> Trang chủ
+                    </a>
                     <div style="font-size: 2.5rem; color: var(--primary-color); margin-bottom: 1rem;">
-                        <i class="fas fa-bee"></i>
+                        <img src="/logo.png" alt="PlanBee Logo" style="width: 60px; height: auto;">
                     </div>
                     <h2 style="font-size: 1.5rem; font-weight: 700;">Đăng nhập PlanBee</h2>
                     <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.5rem;">Chào mừng bạn trở lại! Vui lòng nhập thông tin.</p>

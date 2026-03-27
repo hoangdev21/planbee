@@ -14,8 +14,8 @@ const state = {
 document.documentElement.setAttribute('data-theme', state.theme);
 document.documentElement.style.setProperty('--primary-color', state.accent_color);
 
-// Initialize Chat Bot
-initChatWidget();
+// Initialize Chat Bot (Condition is handled in handleRoute)
+// initChatWidget();
 
 // Router Function
 const navigate = (path) => {
@@ -23,7 +23,7 @@ const navigate = (path) => {
 };
 
 const handleRoute = async () => {
-    initChatWidget(); // Re-init on route
+    // initChatWidget(); // Re-init on route - now handled by route checks below
     const hash = window.location.hash || '#/';
     const app = document.getElementById('app');
     
@@ -33,9 +33,30 @@ const handleRoute = async () => {
 
     // Auth check (mock for now)
     const isAuthRequired = !['#/', '#/login', '#/register'].includes(path);
-    const isLoggedIn = !!localStorage.getItem('token');
+    const token = localStorage.getItem('token');
+    const isLoggedIn = !!token && token !== 'undefined' && token !== 'null';
+
+    
+    // Manage chat widget visibility based on auth state and route
+    const isLanding = path === '#/' || path === '' || path === '#';
+    if (isLanding && !isLoggedIn) {
+        const existingWidget = document.getElementById('bee-chat-widget');
+        if (existingWidget) {
+            existingWidget.remove();
+            console.log('PlanBee: ChatWidget removed from landing page (Guest)');
+        }
+    } else if (isLoggedIn) {
+        initChatWidget();
+    } else {
+        // Safe removal for any other guest routes
+        const existingWidget = document.getElementById('bee-chat-widget');
+        if (existingWidget) existingWidget.remove();
+    }
+
     
     if (isAuthRequired && !isLoggedIn) {
+
+
         navigate('#/login');
         return;
     }

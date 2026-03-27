@@ -10,9 +10,14 @@ let chatHistory = JSON.parse(localStorage.getItem('bee_chat_history') || '[]').m
 localStorage.setItem('bee_chat_history', JSON.stringify(chatHistory));
 
 export const initChatWidget = () => {
-    if (document.getElementById('bee-chat-widget')) return;
     const token = localStorage.getItem('token');
-    if (!token) return;
+    if (!token || token === 'undefined' || token === 'null') {
+
+        const existing = document.getElementById('bee-chat-widget');
+        if (existing) existing.remove();
+        return;
+    }
+    if (document.getElementById('bee-chat-widget')) return;
     const widget = document.createElement('div');
     widget.id = 'bee-chat-widget';
     widget.className = 'chat-widget-closed';
