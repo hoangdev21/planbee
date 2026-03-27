@@ -1,4 +1,5 @@
 const db = require('../config/db');
+const { formatDateForMySQL } = require('../utils/dateFormatter');
 
 const taskController = {
     // Get all user tasks
@@ -24,9 +25,11 @@ const taskController = {
                 return res.status(400).json({ message: 'Tiêu đề không được để trống!' });
             }
 
+            const MySQLDueDate = formatDateForMySQL(due_date);
+
             const [result] = await db.execute(
                 'INSERT INTO tasks (user_id, title, description, priority, due_date) VALUES (?, ?, ?, ?, ?)',
-                [req.user.id, title, description || '', priority || 'medium', due_date || null]
+                [req.user.id, title, description || '', priority || 'medium', MySQLDueDate]
             );
 
             res.status(201).json({ id: result.insertId, title, message: 'Thêm nhiệm vụ thành công!' });
@@ -42,9 +45,11 @@ const taskController = {
             const { id } = req.params;
             const { title, description, status, priority, due_date } = req.body;
 
+            const MySQLDueDate = formatDateForMySQL(due_date);
+
             const [result] = await db.execute(
                 'UPDATE tasks SET title = ?, description = ?, status = ?, priority = ?, due_date = ? WHERE id = ? AND user_id = ?',
-                [title, description, status, priority, due_date, id, req.user.id]
+                [title, description, status, priority, MySQLDueDate, id, req.user.id]
             );
 
             if (result.affectedRows === 0) {

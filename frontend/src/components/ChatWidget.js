@@ -7,6 +7,7 @@ let chatHistory = JSON.parse(localStorage.getItem('bee_chat_history') || '[]').m
     ...msg,
     role: msg.role === 'bot' ? 'assistant' : msg.role
 }));
+let usedSuggestions = JSON.parse(localStorage.getItem('bee_used_suggestions') || '[]');
 localStorage.setItem('bee_chat_history', JSON.stringify(chatHistory));
 
 export const initChatWidget = () => {
@@ -193,6 +194,11 @@ const renderExpanded = (container) => {
                     </div>
                 `).join('')}
             </div>
+            
+            <div class="chat-suggestions" id="chat-suggestions-box">
+                <!-- Suggestions will be rendered here -->
+            </div>
+
             <div class="chat-input-area">
                 <input type="text" id="chat-input" placeholder="Hỏi Bee bất cứ điều gì..." autocomplete="off">
                 <button id="chat-send"><i class="fas fa-paper-plane"></i></button>
@@ -209,7 +215,34 @@ const renderExpanded = (container) => {
     const closeBtn = document.getElementById('chat-close');
     const clearBtn = document.getElementById('chat-clear');
     const fsBtn = document.getElementById('chat-fullscreen');
+    const suggestionsBox = document.getElementById('chat-suggestions-box');
 
+    const updateSuggestions = () => {
+        const suggestions = [
+            { query: "Hôm nay tôi nên làm gì?", label: "Hôm nay làm gì? 🎯" },
+            { query: "Tối nay tôi rảnh, nên làm gì?", label: "Gợi ý việc rảnh ✨" },
+            { query: "Tôi nên ưu tiên task nào trước?", label: "Ưu tiên task 📊" },
+            { query: "Sắp xếp lại lịch trình giúp tôi", label: "Sắp xếp lịch 🔄" }
+        ].filter(s => !usedSuggestions.includes(s.query));
+        
+        suggestionsBox.innerHTML = suggestions.map(s => 
+            `<button class="chat-suggestion-chip" data-query="${s.query}">${s.label}</button>`
+        ).join('');
+
+        suggestionsBox.querySelectorAll('.chat-suggestion-chip').forEach(chip => {
+            chip.onclick = (e) => {
+                e.stopPropagation();
+                const query = chip.dataset.query;
+                usedSuggestions.push(query);
+                localStorage.setItem('bee_used_suggestions', JSON.stringify(usedSuggestions));
+                chatInput.value = query;
+                sendMessage();
+                updateSuggestions(); 
+            };
+        });
+    };
+
+    updateSuggestions();
     const sendMessage = async () => {
         const text = chatInput.value.trim();
         if (!text) return;
@@ -256,7 +289,9 @@ const renderExpanded = (container) => {
         e.stopPropagation();
         if (confirm('Xóa sạch lịch sử trò chuyện?')) {
             chatHistory = [];
+            usedSuggestions = [];
             localStorage.removeItem('bee_chat_history');
+            localStorage.removeItem('bee_used_suggestions');
             renderExpanded(container);
         }
     };
@@ -272,78 +307,100 @@ const showBeeGuide = (params = {}) => {
     const existing = document.getElementById('bee-guide-overlay');
     if (existing) existing.remove();
 
-    // 1. Try finding the specific plan event or month badge inside the planning content only
     const planningPage = document.getElementById('page-content');
+    if (!planningPage) return;
+
     let targetEl = null;
-    if (params.title && planningPage) {
-        targetEl = Array.from(planningPage.querySelectorAll('.plan-event, .month-event-badge'))
-            .find(el => el.innerText.toLowerCase().includes(params.title.toLowerCase()) && el.offsetParent !== null);
-    }
-    
-    // 2. Fallback to the time row label (Day/Week only)
-    if (!targetEl && params.time && params.view !== 'month' && planningPage) {
-        const hour = parseInt(params.time);
-        const timeLabels = planningPage.querySelectorAll('.calendar-grid-scroll > div:first-child > div');
-        targetEl = Array.from(timeLabels).find(el => el.innerText.trim() === `${hour}:00`);
-    }
+    let originalStyles = {};
 
-    let top = '50%', left = '50%', isFlipped = false;
-    let haloW = '100px', haloH = '60px', haloX = '50%', haloY = '50%';
-    let originalZ = '', originalAnim = '', originalShadow = '', originalBorder = '';
-
-    if (targetEl) {
-        const rect = targetEl.getBoundingClientRect();
-        originalZ = targetEl.style.zIndex;
-        originalAnim = targetEl.style.animation;
-        originalShadow = targetEl.style.boxShadow;
-        originalBorder = targetEl.style.border;
-        
-        haloW = `${rect.width + 10}px`;
-        haloH = `${rect.height + 10}px`;
-        haloX = `${rect.left - 5}px`;
-        haloY = `${rect.top - 5}px`;
-
-        // Highlight the target element intensely
-        targetEl.style.zIndex = '10003';
-        targetEl.style.border = '4px solid white';
-        targetEl.style.animation = 'eventFocus 1.5s ease-in-out infinite';
-        targetEl.style.boxShadow = '0 0 30px rgba(255,255,255,0.8)';
-
-        top = `${rect.top + (rect.height / 2) - 60}px`;
-        if (rect.left > window.innerWidth / 2) {
-            left = `${rect.left - 135}px`;
-            isFlipped = true;
-        } else {
-            left = `${rect.right + 20}px`;
-            isFlipped = false;
+    const findTarget = () => {
+        if (params.title) {
+            targetEl = Array.from(planningPage.querySelectorAll('.plan-event, .month-event-badge'))
+                .find(el => el.innerText.toLowerCase().includes(params.title.toLowerCase()) && el.offsetParent !== null);
         }
+        if (!targetEl && params.time && params.view !== 'month') {
+            const hour = parseInt(params.time);
+            const timeLabels = planningPage.querySelectorAll('.calendar-grid-scroll > div:first-child > div');
+            targetEl = Array.from(timeLabels).find(el => el.innerText.trim() === `${hour}:00`);
+        }
+        return targetEl;
+    };
+
+    const highlightTarget = (el) => {
+        originalStyles = {
+            zIndex: el.style.zIndex,
+            animation: el.style.animation,
+            boxShadow: el.style.boxShadow,
+            border: el.style.border
+            // Removed position modification to prevent layout collapse
+        };
+        
+        // Use 'true' to scroll and 'nearest' to avoid excessive blank space at bottom
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        
+        el.style.zIndex = '10003';
+        el.style.border = '4px solid white';
+        el.style.animation = 'eventFocus 1.0s ease-in-out infinite';
+        el.style.boxShadow = '0 0 40px rgba(255,255,255,0.9)';
+    };
+
+    const renderBee = (el) => {
+        // We MUST wait for the scroll to finish to get a stable Rect
+        const rect = el.getBoundingClientRect();
+        let isFlipped = rect.left > window.innerWidth / 2;
+        let top = `${rect.top + (rect.height / 2) - 80}px`;
+        let left = isFlipped ? `${rect.left - 135}px` : `${rect.right + 20}px`;
+
         if (parseInt(left) < 10) left = '10px';
         if (parseInt(left) + 120 > window.innerWidth) left = `${window.innerWidth - 130}px`;
-    }
 
-    const guide = document.createElement('div');
-    guide.id = 'bee-guide-overlay';
-    guide.innerHTML = `
-        <div class="bee-guide-container" style="top: ${top}; left: ${left};">
-            <div class="bee-speech-bubble show-sparkles">Lịch bạn tạo nè!! ✨</div>
-            <img src="/bee-chi-lich.png" class="bee-guide-img" style="${isFlipped ? 'transform: scaleX(-1)' : ''}">
-        </div>
-        <div class="bee-guide-backdrop-simple"></div>
-    `;
-    document.body.appendChild(guide);
+        const guide = document.createElement('div');
+        guide.id = 'bee-guide-overlay';
+        guide.innerHTML = `
+            <div class="bee-guide-container" style="top: ${top}; left: ${left}; opacity: 0; transform: translateY(20px); transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+                <div class="bee-speech-bubble show-sparkles">Lịch bạn tạo nè!! ✨</div>
+                <img src="/bee-chi-lich.png" class="bee-guide-img" style="${isFlipped ? 'transform: scaleX(-1)' : ''}">
+            </div>
+            <div class="bee-guide-backdrop-simple"></div>
+        `;
+        document.body.appendChild(guide);
 
-    const dismiss = () => {
-        if (targetEl) {
-            targetEl.style.zIndex = originalZ;
-            targetEl.style.animation = originalAnim;
-            targetEl.style.boxShadow = originalShadow;
-            targetEl.style.border = originalBorder;
-        }
-        guide.classList.add('fade-out');
-        setTimeout(() => guide.remove(), 500);
-        document.removeEventListener('click', dismiss);
+        // Animation entrance
+        setTimeout(() => {
+            const container = guide.querySelector('.bee-guide-container');
+            if (container) {
+                container.style.opacity = '1';
+                container.style.transform = 'translateY(0)';
+            }
+        }, 50);
+
+        const dismiss = () => {
+            Object.assign(el.style, originalStyles);
+            guide.classList.add('fade-out');
+            setTimeout(() => guide.remove(), 400);
+            document.removeEventListener('click', dismiss);
+        };
+        setTimeout(() => document.addEventListener('click', dismiss), 100);
     };
-    setTimeout(() => document.addEventListener('click', dismiss), 100);
+
+    // SEARCH & SHOW LOOP
+    let attempts = 0;
+    let found = false;
+    const checkAndShow = () => {
+        if (found) return; // Only highlight once
+        const el = findTarget();
+        if (el) {
+            found = true;
+            highlightTarget(el);
+            // Delay renderBee slightly MORE to wait for smooth scroll to finish
+            setTimeout(() => renderBee(el), 600);
+        } else if (attempts < 10) {
+            attempts++;
+            setTimeout(checkAndShow, 100);
+        }
+    };
+
+    checkAndShow();
 };
 
 const addStyles = () => {
@@ -391,6 +448,11 @@ const addStyles = () => {
         .chat-input-area input:focus { border-color: var(--primary-color); }
         #chat-send { width: 48px; background: var(--primary-color); color: white; border: none; border-radius: 12px; cursor: pointer; transition: 0.2s; font-size: 1.1rem; }
         #chat-send:hover { transform: scale(1.05); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+
+        .chat-suggestions { padding: 8px 15px; display: flex; gap: 8px; overflow-x: auto; background: white; white-space: nowrap; scrollbar-width: none; }
+        .chat-suggestions::-webkit-scrollbar { display: none; }
+        .chat-suggestion-chip { background: #f0f2f5; border: 1px solid #e1e4e8; border-radius: 12px; padding: 6px 14px; font-size: 0.8rem; color: #4b5563; font-weight: 500; cursor: pointer; transition: all 0.2s; white-space: nowrap; flex-shrink: 0; }
+        .chat-suggestion-chip:hover { background: #fee2e2; border-color: var(--primary-color); color: var(--primary-color); transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
 
         .typing-dots span { animation: blink 1s infinite; margin: 0 1px; }
         @keyframes blink { 0% { opacity: 0.2; } 50% { opacity: 1; } 100% { opacity: 0.2; } }

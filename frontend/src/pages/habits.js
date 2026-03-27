@@ -128,17 +128,17 @@ const updateHabitsUI = (container) => {
                                             <i class="fas fa-trash-alt"></i> Xóa
                                         </button>
                                         <button class="btn-action-checkin" data-id="${habit.id}">
-                                            <i class="fas fa-fingerprint"></i> Check-in
+                                            <i class="fas fa-fingerprint"></i>
                                         </button>
                                         <button class="btn-action-complete" data-id="${habit.id}">
-                                            <i class="fas fa-flag-checkered"></i> Xong hẳn
+                                            Xong
                                         </button>
                                     ` : `
                                         <div class="done-badge-full">
                                             <i class="fas fa-check-circle"></i> Đã điểm danh!
                                         </div>
                                         <button class="btn-action-complete-secondary" data-id="${habit.id}" title="Hoàn thành thói quen vĩnh viễn">
-                                            <i class="fas fa-flag-checkered"></i> Xong hẳn
+                                            Xong
                                         </button>
                                     `}
                                 </div>

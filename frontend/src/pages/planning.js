@@ -94,12 +94,19 @@ const renderPlanningUI = (container, tasks, habits, plans, params = {}) => {
             .info-value { font-size: 0.88rem; font-weight: 700; color: var(--text-main); line-height: 1.5; }
             
             .allday-pill { padding: 4px 14px; width: fit-content; border-radius: 20px; font-size: 0.75rem; font-weight: 900; color: white; cursor: pointer; border: 1px solid rgba(255,255,255,0.2); margin: 0; display: flex; align-items: center; gap: 6px; }
-            .plan-event { position: absolute; border-left: 4.5px solid rgba(0,0,0,0.15); border-radius: 12px; padding: 8px 12px; color: white; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+            .allday-pill.done { opacity: 0.6; filter: grayscale(0.2); text-decoration: line-through; }
+            
+            .plan-event { position: absolute; border-left: 4.5px solid rgba(0,0,0,0.15); border-radius: 12px; padding: 8px 12px; color: white; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); transition: transform 0.2s; cursor: pointer; }
+            .plan-event:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.15); }
+            .plan-event.done { opacity: 0.6; filter: grayscale(0.2); }
+            .plan-event.done::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, transparent 45%, rgba(255,255,255,0.1) 45%, rgba(255,255,255,0.1) 55%, transparent 55%); background-size: 8px 8px; pointer-events: none; }
+            
             .month-day-cell { border-right: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); min-height: 110px; padding: 10px; cursor: pointer; transition: 0.2s; position: relative; }
             .month-day-cell:hover { background: rgba(0,0,0,0.012); }
             .month-day-number { font-weight: 800; font-size: 0.95rem; color: var(--text-muted); margin-bottom: 8px; display: block; }
             .month-day-number.today { color: var(--primary-color); font-weight: 900; }
-            .month-event-badge { font-size: 0.72rem; font-weight: 800; padding: 4px 8px; border-radius: 6px; color: white; margin-bottom: 3px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; border-left: 3.5px solid rgba(0,0,0,0.15); width: 100%; }
+            .month-event-badge { font-size: 0.72rem; font-weight: 800; padding: 4px 8px; border-radius: 6px; color: white; margin-bottom: 3px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; border-left: 3.5px solid rgba(0,0,0,0.15); width: 100%; display: flex; align-items: center; justify-content: space-between; }
+            .month-event-badge.done { opacity: 0.6; text-decoration: line-through; }
         </style>
     `;
 
@@ -125,14 +132,30 @@ const renderPlanningUI = (container, tasks, habits, plans, params = {}) => {
                         <div class="info-row"><div class="info-icon" style="color:${item.color}"><i class="fas fa-palette"></i></div><div><div class="info-label">MÀU SẮC</div><div style="width:18px; height:18px; border-radius:4px; background:${item.color}; margin-top:2px;"></div></div></div>
                     </div>
                     <div class="info-row" style="align-items:flex-start;"><div class="info-icon"><i class="fas fa-align-left"></i></div><div style="flex:1;"><div class="info-label">MÔ TẢ CHI TIẾT</div><div class="info-value" style="font-weight:500; font-size:0.88rem;">${item.description || 'Chưa có mô tả thêm cho kế hoạch này.'}</div></div></div>
-                    <div style="display:flex; justify-content:space-between; margin-top:24px; padding-top:20px; border-top:1.5px solid var(--border-color);">
-                        <button id="delete-btn" style="color:var(--danger); font-weight:800; border:none; background:none; cursor:pointer; font-size:0.8rem; text-transform:uppercase;"><i class="fas fa-trash-alt"></i> Xóa khỏi lịch</button>
-                        <button id="close-btn" class="btn btn-primary" style="padding:10px 45px; border-radius:12px; font-weight:800; font-size:0.85rem;">HOÀN TẤT</button>
+                    <div style="display:flex; justify-content:space-between; margin-top:24px; padding-top:20px; border-top:1.5px solid var(--border-color); align-items:center;">
+                        <button id="delete-btn" style="color:var(--danger); font-weight:800; border:none; background:none; cursor:pointer; font-size:0.8rem; text-transform:uppercase;"><i class="fas fa-trash-alt"></i> Xóa lịch</button>
+                        <div style="display:flex; gap:12px;">
+                            ${item.status !== 'completed' ? `<button id="complete-btn" class="btn btn-primary" style="padding:10px 30px; border-radius:12px; font-weight:800; font-size:0.85rem; background: #4CAF50;">Hoàn Thành</button>` : `<span style="color:#4CAF50; font-weight:800; font-size:0.9rem;"><i class="fas fa-check-circle"></i> ĐÃ HOÀN THÀNH</span>`}
+                            <button id="close-modal-btn" class="btn btn-outline" style="padding:10px 20px; border-radius:12px; font-weight:800; font-size:0.85rem;">ĐÓNG</button>
+                        </div>
                     </div>
                 </div>
             `;
             document.getElementById('delete-btn').onclick = async () => { if(confirm('Xóa?')){ await api.delete(type==='plan'?`/plans/delete/${item.id}`:`/tasks/delete/${item.id}`); document.getElementById('plan-modal').style.display='none'; renderPlanning(window.planningContainer); }};
-            document.getElementById('close-btn').onclick = () => document.getElementById('plan-modal').style.display='none';
+            if(document.getElementById('complete-btn')) {
+                document.getElementById('complete-btn').onclick = async () => {
+                   try {
+                       if (type === 'plan') {
+                           await api.put(`/plans/update/${item.id}`, { ...item, status: 'completed' });
+                       } else {
+                           await api.put(`/tasks/update/${item.id}`, { ...item, status: 'completed' });
+                       }
+                       document.getElementById('plan-modal').style.display='none';
+                       renderPlanning(window.planningContainer);
+                   } catch(err) { alert('Lỗi: ' + (err.response?.data?.message || err.message)); }
+                };
+            }
+            document.getElementById('close-modal-btn').onclick = () => document.getElementById('plan-modal').style.display='none';
         } else {
              container.innerHTML = `
                 <form id="plan-form" class="fade-in">
@@ -178,19 +201,31 @@ const renderPlanningUI = (container, tasks, habits, plans, params = {}) => {
     document.getElementById('next-btn').onclick = () => { changeDate(1); renderPlanningUI(container, tasks, habits, plans); };
     document.getElementById('today-btn').onclick = () => { currentDate = new Date(); renderPlanningUI(container, tasks, habits, plans); };
 
-    // AUTO-SCROLL LOGIC (Synchronized with render)
-    if (params.time) {
+    // AUTO-SCROLL LOGIC: Scroll to specific time or title
+    if (params.time || params.title) {
         setTimeout(() => {
-            const hour = parseInt(params.time.split(':')[0]);
-            const rowH = currentView === 'week' ? 60 : 65;
             const scrollContainer = container.querySelector('.calendar-grid-scroll');
-            if (scrollContainer) {
-                const scrollPos = (hour * rowH) - 100;
-                scrollContainer.scroll({ top: scrollPos, behavior: 'smooth' });
-                scrollContainer.setAttribute('data-target-hour', hour);
-                setTimeout(() => scrollContainer.removeAttribute('data-target-hour'), 4000);
+            if (!scrollContainer) return;
+
+            let targetY = 0;
+            const targetEl = params.title ? 
+                Array.from(container.querySelectorAll('.plan-event, .month-event-badge'))
+                    .find(el => el.innerText.toLowerCase().includes(params.title.toLowerCase()) && el.offsetParent !== null) : null;
+
+            if (targetEl) {
+                // If we found the actual element, scroll to it
+                targetY = targetEl.offsetTop - 100;
+            } else if (params.time && currentView !== 'month') {
+                // Fallback to time calculation
+                const hour = parseInt(params.time.split(':')[0]);
+                const rowH = currentView === 'week' ? 60 : 65;
+                targetY = (hour * rowH) - 100;
             }
-        }, 300);
+
+            if (targetY > 0) {
+                scrollContainer.scroll({ top: targetY, behavior: 'smooth' });
+            }
+        }, 50);
     }
 
     window.planningContainer = container;
@@ -220,22 +255,35 @@ const renderDayView = (t, h, p) => {
     const ds = currentDate.toISOString().slice(0, 10);
     const dayPlans = p.filter(x => ds >= x.start_time.slice(0,10) && ds <= x.end_time.slice(0,10));
     const allday = dayPlans.filter(x => getPlanType(x) === 'all-day'), hourly = dayPlans.filter(x => getPlanType(x) === 'hourly');
-    let html = `<div style="padding:16px 24px; border-bottom:2px solid var(--border-color); background:var(--sidebar-bg); display:flex; flex-direction:column; gap:12px;"><div style="display:flex; gap:10px; align-items:center;"><small style="font-weight:900; opacity:0.6;">THÓI QUEN:</small>${h.map(x=>`<div class="habit-pill ${x.last_completed&&x.last_completed.startsWith(ds)?'done':'not-done'}">${x.title}</div>`).join('')}</div>${allday.length > 0 ? `<div style="display:flex; gap:14px; align-items:center; flex-wrap:wrap;"><small style="font-weight:900; opacity:0.6;">DÀI NGÀY:</small>${allday.map(x=>`<div class="allday-pill" data-id="${x.id}" style="background:${x.color};"><i class="fas fa-calendar-check" style="font-size:0.65rem; opacity:0.8;"></i> ${x.title}</div>`).join('')}</div>` : ''}</div>`;
+    let html = `<div style="padding:16px 24px; border-bottom:2px solid var(--border-color); background:var(--sidebar-bg); display:flex; flex-direction:column; gap:12px;"><div style="display:flex; gap:10px; align-items:center;"><small style="font-weight:900; opacity:0.6;">THÓI QUEN:</small>${h.map(x=>`<div class="habit-pill ${x.last_completed&&x.last_completed.startsWith(ds)?'done':'not-done'}">${x.title}</div>`).join('')}</div>${allday.length > 0 ? `<div style="display:flex; gap:14px; align-items:center; flex-wrap:wrap;"><small style="font-weight:900; opacity:0.6;">DÀI NGÀY:</small>${allday.map(x=>{const done = x.status === 'completed'; return `<div class="allday-pill ${done?'done':''}" data-id="${x.id}" style="background:${x.color};"><i class="fas ${done?'fa-check-circle':'fa-calendar-check'}" style="font-size:0.65rem; opacity:0.8;"></i> ${x.title}</div>`}).join('')}</div>` : ''}</div>`;
     const rowH = 65;
     let grid = Array(24).fill(0).map((_,h)=>`<div class="time-row" style="height:${rowH}px;"><div class="time-label">${h}:00</div><div class="time-slot" style="background:${h%2===0?'rgba(0,0,0,0.01)':'transparent'}"></div></div>`).join('');
     let items = hourly.map(x => {
-        const s = new Date(x.start_time), e = new Date(x.end_time), top = (s.getHours()*rowH)+(s.getMinutes()*(rowH/60))+4, height = Math.max(((e-s)/60000)*(rowH/60)-8, 60);
-        return `<div class="plan-event" data-id="${x.id}" style="top:${top}px; height:${height}px; background:${x.color}; width:280px; left:90px;"><div style="font-size: 0.72rem; font-weight: 900; opacity: 0.85; margin-bottom: 4px;"><i class="far fa-clock"></i> ${s.getHours()}:${s.getMinutes().toString().padStart(2,'0')} - ${e.getHours()}:${e.getMinutes().toString().padStart(2,'0')}</div><div style="font-size:0.92rem; font-weight:900; line-height:1.2; margin-bottom:4px;">${x.title}</div><div style="font-size:0.75rem; font-weight:500; opacity:0.8; line-height:1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${x.description || ''}</div></div>`;
+        const s = new Date(x.start_time), e = new Date(x.end_time);
+        
+        // Calculate top offset
+        const top = (s.getHours() * rowH) + (s.getMinutes() * (rowH / 60)) + 4;
+        
+        // Calculate height, but CLIP it to not exceed the 24h grid in the current Day View
+        let durationMinutes = (e - s) / 60000;
+        // If it starts today but ends tomorrow, clip duration to end of today (24:00)
+        const dayEnd = new Date(s); dayEnd.setHours(23, 59, 59, 999);
+        if (e > dayEnd) durationMinutes = (dayEnd - s) / 60000;
+        
+        const height = Math.max(durationMinutes * (rowH / 60) - 8, 40);
+        
+        const done = x.status === 'completed';
+        return `<div class="plan-event ${done?'done':''}" data-id="${x.id}" style="top:${top}px; height:${height}px; background:${x.color}; width:280px; left:90px;"><div style="font-size: 0.72rem; font-weight: 900; opacity: 0.85; margin-bottom: 4px; display:flex; align-items:center; justify-content:space-between;"><section><i class="far fa-clock"></i> ${s.getHours()}:${s.getMinutes().toString().padStart(2,'0')} - ${e.getHours()}:${e.getMinutes().toString().padStart(2,'0')}</section>${done?'<i class="fas fa-check-circle" style="font-size:0.9rem;"></i>':''}</div><div style="font-size:0.92rem; font-weight:900; line-height:1.2; margin-bottom:4px;">${x.title}</div><div style="font-size:0.75rem; font-weight:500; opacity:0.8; line-height:1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${x.description || ''}</div></div>`;
     }).join('');
-    return `<div class="calendar-grid-scroll" style="overflow-y:auto; height:100%">${html}<div style="position:relative">${grid}${items}</div></div>`;
+    return `<div class="calendar-grid-scroll" style="overflow-y:auto; height:100%">${html}<div style="position:relative; height:${24 * rowH}px;">${grid}${items}</div></div>`;
 };
 
 const renderWeekView = (t, h, p) => {
     const start = getStartOfWeek(currentDate), rowH = 60, weeklyAllDay = p.filter(x => getPlanType(x) === 'all-day');
     let header = `<div style="display:grid; grid-template-columns: 80px repeat(7, 1fr); border-bottom:1.5px solid var(--border-color); position:sticky; top:0; z-index:100; background:var(--card-bg);"><div style="border-right:1px solid var(--border-color)"></div>${['T2','T3','T4','T5','T6','T7','CN'].map((l,i)=>{const d=new Date(start); d.setDate(start.getDate()+i); const active=d.toISOString().slice(0,10)===new Date().toISOString().slice(0,10); return `<div style="padding:10px; text-align:center; border-right:1px solid var(--border-color); ${active?'background:var(--primary-light); color:var(--primary-color);':''}"><small style="opacity:0.6; font-weight:800">${l}</small><div style="font-weight:900; font-size:1.1rem">${d.getDate()}</div></div>`;}).join('')}</div>`;
     let alldayS = `<div style="display:grid; grid-template-columns: 80px repeat(7, 1fr); border-bottom:2px solid var(--border-color); background:var(--sidebar-bg); min-height:48px; padding:8px 0;"><div style="border-right:1px solid var(--border-color); display:flex; align-items:center; justify-content:center;"><i class="fas fa-layer-group" style="opacity:0.3; font-size:0.9rem;"></i></div>${Array(7).fill(0).map((_,i)=>{const ds=new Date(new Date(start).setDate(start.getDate()+i)).toISOString().slice(0,10); const dayA=weeklyAllDay.filter(x=>ds>=x.start_time.slice(0,10)&&ds<=x.end_time.slice(0,10)); return `<div style="border-right:1px solid var(--border-color); padding:0 6px; display:flex; flex-direction:column; gap:4px;">${dayA.map(x=>{const s=x.start_time.slice(0,10)===ds, e=x.end_time.slice(0,10)===ds; return `<div class="allday-pill" data-id="${x.id}" style="background:${x.color}; width:100%; font-size:0.65rem; border-radius:${s?'20px 0 0 20px':e?'0 20px 20px 0':'0'}; border-left:${s?'3px solid rgba(0,0,0,0.15)':'none'}; box-shadow:none;">${s?x.title:'&nbsp;'}</div>`;}).join('')}</div>`;}).join('')}</div>`;
-    let grid = `<div class="calendar-grid-scroll" style="display:grid; grid-template-columns: 80px repeat(7, 1fr); overflow-y:auto; flex:1; position:relative;"><div>${Array(24).fill(0).map((_,h)=>`<div style="height:${rowH}px; border-bottom:1px solid var(--border-color); text-align:right; padding:12px; font-size:0.75rem; color:var(--text-muted); font-weight:800">${h}:00</div>`).join('')}</div>${Array(7).fill(0).map((_,i)=>{const ds=new Date(new Date(start).setDate(start.getDate()+i)).toISOString().slice(0,10); return `<div style="position:relative; border-right:1px solid var(--border-color);">${Array(24).fill(0).map(()=>`<div style="height:${rowH}px; border-bottom:1px solid var(--border-color)"></div>`).join('')}${p.filter(x=>getPlanType(x)==='hourly'&&x.start_time.startsWith(ds)).map(x=>{const s=new Date(x.start_time),e=new Date(x.end_time),top=(s.getHours()*rowH)+(s.getMinutes()*(rowH/60))+4,h=Math.max(((e-s)/60000)*(rowH/60)-8, 60); return `<div class="plan-event" data-id="${x.id}" style="top:${top}px; height:${h}px; width:calc(100% - 10px); left:5px; background:${x.color};"><div style="font-size: 0.72rem; font-weight: 900; opacity: 0.85; margin-bottom: 4px;"><i class="far fa-clock"></i> ${s.getHours()}:${s.getMinutes().toString().padStart(2,'0')} - ${e.getHours()}:${e.getMinutes().toString().padStart(2,'0')}</div><div style="font-size:0.92rem; font-weight:900; line-height:1.2; margin-bottom:4px;">${x.title}</div><div style="font-size:0.75rem; font-weight:500; opacity:0.8; line-height:1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${x.description || ''}</div></div>`;}).join('')}</div>`;}).join('')}</div>`;
-    return `<div style="height:100%; display:flex; flex-direction:column;">${header}${alldayS}${grid}</div>`;
+    let grid = `<div class="calendar-grid-scroll" style="display:grid; grid-template-columns: 80px repeat(7, 1fr); overflow-y:auto; flex:1; position:relative; max-height:${24 * rowH}px;"><div>${Array(24).fill(0).map((_,h)=>`<div style="height:${rowH}px; border-bottom:1px solid var(--border-color); text-align:right; padding:12px; font-size:0.75rem; color:var(--text-muted); font-weight:800">${h}:00</div>`).join('')}</div>${Array(7).fill(0).map((_,i)=>{const ds=new Date(new Date(start).setDate(start.getDate()+i)).toISOString().slice(0,10); return `<div style="position:relative; border-right:1px solid var(--border-color);">${Array(24).fill(0).map(()=>`<div style="height:${rowH}px; border-bottom:1px solid var(--border-color)"></div>`).join('')}${p.filter(x=>getPlanType(x)==='hourly'&&x.start_time.startsWith(ds)).map(x=>{const s=new Date(x.start_time),e=new Date(x.end_time); const top=(s.getHours()*rowH)+(s.getMinutes()*(rowH/60))+4; let dur=(e-s)/60000; const dE=new Date(s); dE.setHours(23,59,59,999); if(e>dE) dur=(dE-s)/60000; const height=Math.max(dur*(rowH/60)-8, 40),done=x.status==='completed'; return `<div class="plan-event ${done?'done':''}" data-id="${x.id}" style="top:${top}px; height:${height}px; width:calc(100% - 10px); left:5px; background:${x.color};"><div style="font-size: 0.72rem; font-weight: 900; opacity: 0.85; margin-bottom: 4px; display:flex; align-items:center; justify-content:space-between;"><section><i class="far fa-clock"></i> ${s.getHours()}:${s.getMinutes().toString().padStart(2,'0')} - ${e.getHours()}:${e.getMinutes().toString().padStart(2,'0')}</section>${done?'<i class="fas fa-check-circle"></i>':''}</div><div style="font-size:0.92rem; font-weight:900; line-height:1.2; margin-bottom:4px;">${x.title}</div><div style="font-size:0.75rem; font-weight:500; opacity:0.8; line-height:1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${x.description || ''}</div></div>`;}).join('')}</div>`;}).join('')}</div>`;
+    return `<div style="height:100%; display:flex; flex-direction:column; overflow:hidden;">${header}${alldayS}${grid}</div>`;
 };
 
 const renderMonthView = (tasks, habits, plans) => {
@@ -247,7 +295,7 @@ const renderMonthView = (tasks, habits, plans) => {
     for(let d=1; d<=end.getDate(); d++) {
         const ds = new Date(currentDate.getFullYear(), currentDate.getMonth(), d).toISOString().slice(0,10), active = ds === new Date().toISOString().slice(0, 10);
         const dayP = plans.filter(p => ds >= p.start_time.slice(0,10) && ds <= p.end_time.slice(0,10));
-        body += `<div class="month-day-cell" data-date="${ds}"><span class="month-day-number ${active?'today':''}">${d}</span><div class="month-indicator-container">${dayP.slice(0,3).map(p=>`<div class="month-event-badge" data-id="${p.id}" style="background:${p.color};">${p.title}</div>`).join('')}${dayP.length>3?`<div style="font-size:0.65rem; font-weight:800; color:var(--text-light); text-align:center;">+ ${dayP.length-3} kế hoạch</div>`:''}</div></div>`;
+        body += `<div class="month-day-cell" data-date="${ds}"><span class="month-day-number ${active?'today':''}">${d}</span><div class="month-indicator-container">${dayP.slice(0,3).map(p=>{ const done=p.status==='completed'; return `<div class="month-event-badge ${done?'done':''}" data-id="${p.id}" style="background:${p.color};">${p.title}${done?' <i class="fas fa-check" style="font-size:0.6rem;"></i>':''}</div>`}).join('')}${dayP.length>3?`<div style="font-size:0.65rem; font-weight:800; color:var(--text-light); text-align:center;">+ ${dayP.length-3} kế hoạch</div>`:''}</div></div>`;
     }
     const rem = (startDay + end.getDate()) % 7 === 0 ? 0 : 7 - ((startDay + end.getDate()) % 7);
     for(let i=0; i<rem; i++) body += `<div style="border-right: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); background:rgba(0,0,0,0.012); height: 110px;"></div>`;

@@ -16,6 +16,7 @@ async function migrate() {
         const alterQueries = [
             { table: 'plans', column: 'color', query: "ALTER TABLE plans ADD COLUMN color VARCHAR(20) DEFAULT '#FFA726'" },
             { table: 'plans', column: 'priority', query: "ALTER TABLE plans ADD COLUMN priority ENUM('low', 'medium', 'high') DEFAULT 'medium'" },
+            { table: 'plans', column: 'status', query: "ALTER TABLE plans ADD COLUMN status ENUM('pending', 'doing', 'completed', 'cancelled') DEFAULT 'pending'" },
             { table: 'habits', column: 'preferred_time', query: "ALTER TABLE habits ADD COLUMN preferred_time TIME" }
         ];
 

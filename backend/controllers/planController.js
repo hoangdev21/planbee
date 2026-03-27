@@ -1,4 +1,5 @@
 const db = require('../config/db');
+const { formatDateForMySQL } = require('../utils/dateFormatter');
 
 const planController = {
     // Get all user plans
@@ -24,6 +25,9 @@ const planController = {
                 return res.status(400).json({ message: 'Vui lòng nhập tên, thời gian bắt đầu và kết thúc!' });
             }
 
+            const MySQLStart = formatDateForMySQL(start_time);
+            const MySQLEnd = formatDateForMySQL(end_time);
+
             if (new Date(start_time) >= new Date(end_time)) {
                 return res.status(400).json({ message: 'Thời gian kết thúc phải sau thời gian bắt đầu!' });
             }
@@ -31,7 +35,7 @@ const planController = {
             // Check for overlaps
             const [overlaps] = await db.execute(
                 'SELECT title FROM plans WHERE user_id = ? AND start_time < ? AND end_time > ?',
-                [req.user.id, end_time, start_time]
+                [req.user.id, MySQLEnd, MySQLStart]
             );
 
             if (overlaps.length > 0) {
@@ -42,7 +46,7 @@ const planController = {
 
             const [result] = await db.execute(
                 'INSERT INTO plans (user_id, title, description, start_time, end_time, color, priority) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                [req.user.id, title, description || '', start_time, end_time, color || '#FFA726', priority || 'medium']
+                [req.user.id, title, description || '', MySQLStart, MySQLEnd, color || '#FFA726', priority || 'medium']
             );
 
             res.status(201).json({ id: result.insertId, message: 'Lập kế hoạch thành công!' });
@@ -58,10 +62,13 @@ const planController = {
             const { id } = req.params;
             const { title, description, start_time, end_time, color, status, priority } = req.body;
             
+            const MySQLStart = formatDateForMySQL(start_time);
+            const MySQLEnd = formatDateForMySQL(end_time);
+
             // Check for overlaps (excluding current plan)
             const [overlaps] = await db.execute(
                 'SELECT title FROM plans WHERE user_id = ? AND id != ? AND start_time < ? AND end_time > ?',
-                [req.user.id, id, end_time, start_time]
+                [req.user.id, id, MySQLEnd, MySQLStart]
             );
 
             if (overlaps.length > 0) {
@@ -72,7 +79,7 @@ const planController = {
 
             const [result] = await db.execute(
                 'UPDATE plans SET title = ?, description = ?, start_time = ?, end_time = ?, color = ?, status = ?, priority = ? WHERE id = ? AND user_id = ?',
-                [title, description, start_time, end_time, color, status || 'pending', priority || 'medium', id, req.user.id]
+                [title, description, MySQLStart, MySQLEnd, color, status || 'pending', priority || 'medium', id, req.user.id]
             );
 
             if (result.affectedRows === 0) {

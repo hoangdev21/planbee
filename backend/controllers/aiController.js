@@ -1,4 +1,5 @@
 const db = require('../config/db');
+const { formatDateForMySQL } = require('../utils/dateFormatter');
 
 const aiController = {
     chat: async (req, res) => {
@@ -12,60 +13,63 @@ const aiController = {
 
         try {
             const now = new Date();
-            const currentTime = now.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+            const options = { timeZone: 'Asia/Ho_Chi_Minh', hour12: false };
+            const currentTime = now.toLocaleString('vi-VN', options);
+            const dayOfWeek = now.toLocaleDateString('vi-VN', { ...options, weekday: 'long' });
             
-            let taskData = [], planData = [];
-            try {
-                // DEFENSIVE SCHEMA CHECK: Always ensure table is ready
-                const [cols] = await db.execute("SHOW COLUMNS FROM plans");
-                const hasS = cols.some(c => c.Field === 'status');
-                const hasP = cols.some(c => c.Field === 'priority');
-                if (!hasS) await db.execute("ALTER TABLE plans ADD COLUMN status VARCHAR(20) DEFAULT 'pending'");
-                if (!hasP) await db.execute("ALTER TABLE plans ADD COLUMN priority VARCHAR(20) DEFAULT 'medium'");
-            } catch (err) {
-                console.error("Migration Silence:", err.message);
-            }
+            let taskData = [], planData = [], habitData = [];
+            
+            // INDEPENDENT FETCH: Ensure AI always has data
+            const [t] = await db.execute('SELECT id, title, description, status, priority, due_date FROM tasks WHERE user_id = ? AND (status != "completed" OR created_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)) ORDER BY priority DESC, due_date ASC LIMIT 30', [userId]);
+            const [p] = await db.execute('SELECT id, title, description, status, priority, start_time, end_time FROM plans WHERE user_id = ? AND (end_time >= DATE_SUB(NOW(), INTERVAL 6 HOUR)) ORDER BY start_time ASC LIMIT 30', [userId]);
+            const [h] = await db.execute('SELECT id, title, description, frequency, goal, current_streak, last_completed FROM habits WHERE user_id = ? LIMIT 20', [userId]);
+            
+            taskData = t; planData = p; habitData = h;
 
-            // INDEPENDENT FETCH: Ensure AI always has data even if migration fails
-            const [t] = await db.execute('SELECT id, title, description, status, priority, due_date FROM tasks WHERE user_id = ? ORDER BY due_date ASC LIMIT 20', [userId]);
-            const [p] = await db.execute('SELECT id, title, description, status, priority, start_time, end_time FROM plans WHERE user_id = ? ORDER BY start_time ASC LIMIT 20', [userId]);
-            taskData = t; planData = p;
+            const tasksStr = taskData.map(t => `- **${t.title}** [id:${t.id}] (Ưu tiên: ${t.priority}, Hạn: ${t.due_date}, Trạng thái: ${t.status})`).join('\n');
+            const plansStr = planData.map(p => `- **${p.title}** [id:${p.id}] (Bắt đầu: ${p.start_time}, Kết thúc: ${p.end_time}, Trạng thái: ${p.status})`).join('\n');
+            const habitsStr = habitData.map(h => `- **${h.title}** (Tần suất: ${h.frequency}, Chuỗi: ${h.current_streak}, Hoàn thành gần nhất: ${h.last_completed})`).join('\n');
 
-            const tasksStr = taskData.map(t => `${t.title} [id:${t.id}] (${t.status}, Hạn: ${t.due_date})`).join('; ');
-            const plansStr = planData.map(p => `${p.title} [id:${p.id}] (${p.status}, Bắt đầu: ${p.start_time})`).join('; ');
-
-            // SANITIZE HISTORY: Force all roles to be compliant with Groq/OpenAI
+            // SANITIZE HISTORY
             const sanitizedHistory = (history || []).map(msg => ({
                 role: (msg.role === 'bot' || msg.role === 'assistant') ? 'assistant' : 'user',
                 content: msg.content
             })).filter(msg => msg.role !== 'system');
 
-const systemPrompt = `
-Bạn là Bee - Trợ lý AI chuyên nghiệp, tận tâm và thân thiện của ứng dụng PlanBee. 🥰🐝
+            const systemPrompt = `
+Bạn là Bee - Trợ lý AI chuyên nghiệp và tận tâm của PlanBee. 🥰🐝
 
-NHIỆM VỤ CHÍNH:
-- Giúp người dùng quản lý Nhiệm vụ (Tasks) và Lịch trình (Plans).
-- Trò chuyện, giải đáp thắc mắc và hỗ trợ tối ưu hóa thời gian.
+NHIỆM VỤ: Phân tích và gợi ý lịch trình thông minh (RAG).
 
-PHONG CÁCH PHẢN HỒI (PROFESSIONAL & ELEGANT):
-1. TRÒ CHUYỆN: Khi người dùng chào hỏi hoặc nói chuyện bâng quơ, hãy đáp lại một cách tự nhiên, lịch sự và ấm áp. KHÔNG hiển thị danh sách hay nút bấm thừa thãi trong trường hợp này.
-2. DANH SÁCH & ĐỊNH DẠNG:
-   - KHÔNG dùng dấu gạch ngang "-" ở đầu câu nếu chỉ có 1 nội dung.
-   - Chỉ dùng dấu "-" khi liệt kê từ 2 mục trở lên.
-   - Luôn **BÔI ĐẬM** các từ khóa, tiêu đề quan trọng. Mẫu: **Tiêu đề** ⏰ Giờ 📍 Mô tả 🥰
-3. THẺ HÀNH ĐỘNG (QUAN TRỌNG):
-   - CHỈ đính kèm thẻ [] khi bạn vừa thực hiện THÀNH CÔNG một thao tác (Thêm/Xóa/Sửa).
-   - [view_plan:view=week&date=YYYY-MM-DD&time=HH:00&title=...] -> Dùng khi thêm/cập nhật lịch thành công.
-   - [delete_plan:id=...&view=week&date=YYYY-MM-DD&time=HH:00&title=...] -> Dùng khi xác nhận xóa.
-   - Tuyệt đối KHÔNG tự ý chèn thẻ [] vào các câu chào hỏi hoặc báo rà soát danh sách thông thường.
-   - Thẻ hành động phải là nội dung CUỐI CÙNG của tin nhắn.
+QUY TẮC PHẢN HỒI (BẮT BUỘC):
+1. **Gọn gàng & Phân ý**: Không viết đoạn văn dài. Hãy dùng danh sách dấu chấm tròn hoặc số thứ tự.
+2. **Trực diện**: Trả lời thẳng vào vấn đề. 
+3. **Phân tích RAG**:
+   - Ưu tiên Task **High Priority** và deadline gần.
+   - Chỉ ra các khoảng trống trong "Kế hoạch" để gợi ý việc nên làm.
+   - Nhắc nhở Thói quen chưa hoàn thành.
+4. **Định dạng**:
+   - **BÔI ĐẬM** tên công việc và mốc thời gian.
+   - Sử dụng emoji để tăng tính trực quan (⏰, 🎯, 📚, ✨).
+5. **Cấu trúc gợi ý lý tưởng**:
+   - 📅 **Phân tích hiện tại**: (Ngắn gọn tình hình)
+   - 🚀 **Hành động ưu tiên**: (Việc cần làm ngay)
+   - 💡 **Gợi ý thêm**: (Tối ưu thời gian rảnh/Thói quen)
 
-DỮ LIỆU HIỆN TẠI (Để tham khảo khi được hỏi):
-Thời gian: ${currentTime}
-Nhiệm vụ: ${tasksStr}
-Kế hoạch: ${plansStr}
+**HÀNH ĐỘNG KỸ THUẬT** (Luôn đặt ở cuối):
+- [view_plan:title=...&date=YYYY-MM-DD&time=HH:00] -> Dùng khi tạo/cập nhật thành công.
+- [delete_plan:id=...&title=...] -> Dùng khi xóa thành công.
 
-LƯU Ý: Tuyệt đối bảo mật ID kỹ thuật [id:...], không được lộ ra ngoài câu trả lời.
+DỮ LIỆU THỰC TẾ (CONTEXT):
+- Thời gian: ${currentTime} (${dayOfWeek})
+- Tasks:
+${tasksStr || 'Trống'}
+- Plans:
+${plansStr || 'Trống'}
+- Habits:
+${habitsStr || 'Trống'}
+
+LƯU Ý: Tuyệt đối bảo mật ID [id:...]. Thẻ hành động [] luôn đặt ở CUỐI CÙNG.
 `;
 
             const messages = [
@@ -100,7 +104,8 @@ LƯU Ý: Tuyệt đối bảo mật ID kỹ thuật [id:...], không được l�
                             properties: {
                                 title: { type: "string" },
                                 start_time: { type: "string", description: "YYYY-MM-DD HH:MM:SS" },
-                                end_time: { type: "string", description: "YYYY-MM-DD HH:MM:SS" }
+                                end_time: { type: "string", description: "YYYY-MM-DD HH:MM:SS" },
+                                color: { type: "string", description: "Hex color code" }
                             },
                             required: ["title", "start_time", "end_time"]
                         }
@@ -109,24 +114,8 @@ LƯU Ý: Tuyệt đối bảo mật ID kỹ thuật [id:...], không được l�
                 {
                     type: "function",
                     function: {
-                        name: "update_task_status",
-                        description: "Update status of a task (e.g. to 'completed' or 'cancelled').",
-                        parameters: {
-                            type: "object",
-                            properties: {
-                                title: { type: "string", description: "Title of task" },
-                                status: { type: "string", enum: ["pending", "doing", "completed", "cancelled"] },
-                                datehint: { type: "string", description: "Optional date hint like '2026-03-28' to disambiguate" }
-                            },
-                            required: ["title", "status"]
-                        }
-                    }
-                },
-                {
-                    type: "function",
-                    function: {
-                        name: "update_plan_status",
-                        description: "Update status of a plan.",
+                        name: "update_status",
+                        description: "Update status of a task or plan.",
                         parameters: {
                             type: "object",
                             properties: {
@@ -141,23 +130,14 @@ LƯU Ý: Tuyệt đối bảo mật ID kỹ thuật [id:...], không được l�
                 {
                     type: "function",
                     function: {
-                        name: "delete_task",
-                        description: "Delete an existing task.",
+                        name: "delete_item",
+                        description: "Delete an item.",
                         parameters: {
                             type: "object",
-                            properties: { title: { type: "string" } },
-                            required: ["title"]
-                        }
-                    }
-                },
-                {
-                    type: "function",
-                    function: {
-                        name: "delete_plan",
-                        description: "Delete an existing plan.",
-                        parameters: {
-                            type: "object",
-                            properties: { title: { type: "string" } },
+                            properties: { 
+                                title: { type: "string" },
+                                type: { type: "string", enum: ["task", "plan"] }
+                            },
                             required: ["title"]
                         }
                     }
@@ -169,7 +149,7 @@ LƯU Ý: Tuyệt đối bảo mật ID kỹ thuật [id:...], không được l�
                 headers: { "Authorization": `Bearer ${groqApiKey}`, "Content-Type": "application/json" },
                 body: JSON.stringify({
                     model: "llama-3.3-70b-versatile",
-                    messages, tools, tool_choice: "auto", temperature: 0
+                    messages, tools, tool_choice: "auto", temperature: 0.1
                 })
             });
 
@@ -180,58 +160,66 @@ LƯU Ý: Tuyệt đối bảo mật ID kỹ thuật [id:...], không được l�
 
             if (messageObj.tool_calls) {
                 messages.push(messageObj);
+                
                 for (const toolCall of messageObj.tool_calls) {
                     const args = JSON.parse(toolCall.function.arguments);
                     let resTool = "";
+
                     if (toolCall.function.name === "add_new_task") {
-                        await db.execute('INSERT INTO tasks (user_id, title, due_date) VALUES (?, ?, ?)', [userId, args.title, args.due_date || null]);
+                        await db.execute('INSERT INTO tasks (user_id, title, due_date) VALUES (?, ?, ?)', 
+                            [userId, args.title, formatDateForMySQL(args.due_date)]);
                         resTool = "Success";
                     } else if (toolCall.function.name === "add_new_plan") {
-                        // Conflict check
+                        const start = formatDateForMySQL(args.start_time);
+                        const end = formatDateForMySQL(args.end_time);
                         const [overlaps] = await db.execute(
                             'SELECT title FROM plans WHERE user_id = ? AND start_time < ? AND end_time > ?',
-                            [userId, args.end_time, args.start_time]
+                            [userId, end, start]
                         );
                         if (overlaps.length > 0) {
-                            resTool = `Error: Overlap detected with existing plan "${overlaps[0].title}". Do not add. Inform the user about this conflict specifically.`;
+                            resTool = `Error: Overlap with "${overlaps[0].title}".`;
                         } else {
-                            await db.execute('INSERT INTO plans (user_id, title, start_time, end_time) VALUES (?, ?, ?, ?)', [userId, args.title, args.start_time, args.end_time]);
+                            const colors = ['#2196F3', '#4CAF50', '#9C27B0', '#E91E63', '#009688', '#FF9800'];
+                            const color = args.color || colors[Math.floor(Math.random() * colors.length)];
+                            await db.execute('INSERT INTO plans (user_id, title, start_time, end_time, color) VALUES (?, ?, ?, ?, ?)', 
+                                [userId, args.title, start, end, color]);
                             resTool = "Success";
                         }
-                    } else if (toolCall.function.name === "update_task_status") {
-                        let q = 'UPDATE tasks SET status = ? WHERE user_id = ? AND title = ?';
-                        let params = [args.status, userId, args.title];
-                        if (args.datehint) { q += ' AND due_date LIKE ?'; params.push(`%${args.datehint}%`); }
-                        const [upR] = await db.execute(q, params);
-                        resTool = upR.affectedRows > 0 ? "Updated successfully" : "Task not found";
-                    } else if (toolCall.function.name === "update_plan_status") {
-                        let q = 'UPDATE plans SET status = ? WHERE user_id = ? AND title = ?';
-                        let params = [args.status, userId, args.title];
-                        if (args.datehint) { q += ' AND start_time LIKE ?'; params.push(`%${args.datehint}%`); }
-                        const [upR] = await db.execute(q, params);
-                        resTool = upR.affectedRows > 0 ? "Updated successfully" : "Plan not found";
-                    } else if (toolCall.function.name === "delete_task") {
-                        resTool = "Success, identified for deletion";
-                    } else if (toolCall.function.name === "delete_plan") {
-                        resTool = "Success, identified for deletion";
+                    } else if (toolCall.function.name === "update_status") {
+                        const title = (args.title || "").trim();
+                        const [upT] = await db.execute('UPDATE tasks SET status = ? WHERE user_id = ? AND title = ?', [args.status, userId, title]);
+                        if (upT.affectedRows > 0) {
+                            resTool = "Updated task successfully";
+                        } else {
+                            const [upP] = await db.execute('UPDATE plans SET status = ? WHERE user_id = ? AND title = ?', [args.status, userId, title]);
+                            resTool = upP.affectedRows > 0 ? "Updated plan successfully" : "Not found.";
+                        }
+                    } else if (toolCall.function.name === "delete_item") {
+                        resTool = "Success";
                     }
                     messages.push({ tool_call_id: toolCall.id, role: "tool", name: toolCall.function.name, content: resTool });
                 }
 
-                const secondRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+                const sR = await fetch("https://api.groq.com/openai/v1/chat/completions", {
                     method: "POST",
                     headers: { "Authorization": `Bearer ${groqApiKey}`, "Content-Type": "application/json" },
                     body: JSON.stringify({ model: "llama-3.3-70b-versatile", messages })
                 });
-                const finalData = await secondRes.json();
-                return res.json({ result: finalData.choices[0].message.content });
+                const fD = await sR.json();
+                if (fD.error) throw new Error(JSON.stringify(fD.error));
+                if (!fD.choices || !fD.choices[0]) throw new Error("API returned no choices");
+                
+                return res.json({ result: fD.choices[0].message.content });
             }
 
             return res.json({ result: messageObj.content || "Bee chào bạn 🥰" });
 
         } catch (error) {
             console.error('AI Error:', error);
-            res.status(500).json({ message: "Bee lỗi rồi, thử lại nhé 🥰" });
+            const errorMessage = error.message.includes('rate_limit_exceeded') 
+                ? "Bee đang bận một chút do quá tải, bạn chờ vài giây rồi thử lại nhé 🥰🐝" 
+                : "Bee lỗi rồi, thử lại nhé 🥰";
+            res.status(500).json({ message: errorMessage });
         }
     }
 };
