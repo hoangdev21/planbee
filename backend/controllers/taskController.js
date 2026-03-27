@@ -45,20 +45,44 @@ const taskController = {
     updateTask: async (req, res) => {
         try {
             const { id } = req.params;
-            const { title, description, status, priority, due_date } = req.body;
+            const updates = req.body;
+            
+            const fields = [];
+            const values = [];
+            const allowedFields = ['title', 'description', 'status', 'priority', 'due_date'];
 
-            const MySQLDueDate = formatDateForMySQL(due_date);
+            for (const field of allowedFields) {
+                if (updates[field] !== undefined) {
+                    fields.push(`${field} = ?`);
+                    if (field === 'due_date') {
+                        values.push(formatDateForMySQL(updates[field]));
+                    } else {
+                        values.push(updates[field]);
+                    }
+                }
+            }
 
+            if (fields.length === 0) {
+                return res.status(400).json({ message: 'Không có dữ liệu cập nhật.' });
+            }
+
+            values.push(id, req.user.id);
             const [result] = await db.execute(
-                'UPDATE tasks SET title = ?, description = ?, status = ?, priority = ?, due_date = ? WHERE id = ? AND user_id = ?',
-                [title, description, status, priority, MySQLDueDate, id, req.user.id]
+                `UPDATE tasks SET ${fields.join(', ')} WHERE id = ? AND user_id = ?`,
+                values
             );
 
             if (result.affectedRows === 0) {
                 return res.status(404).json({ message: 'Không tìm thấy nhiệm vụ hoặc không có quyền sửa.' });
             }
 
-            if (status === 'completed') {
+            if (updates.status === 'completed') {
+                // Get title for notification if not provided in updates
+                let title = updates.title;
+                if (!title) {
+                    const [task] = await db.execute('SELECT title FROM tasks WHERE id = ?', [id]);
+                    title = task[0] ? task[0].title : 'nhiệm vụ';
+                }
                 await NotificationController.create(req.user.id, `Bạn đã hoàn thành nhiệm vụ: "${title}"`);
             }
             res.json({ message: 'Cập nhật thành công!' });

@@ -323,12 +323,16 @@ export const renderSettings = async (container) => {
         if (activeTab === 'personal') {
             return `
                 <div style="display: flex; align-items: center; gap: 32px; margin-bottom: 40px;">
-                    <div style="width: 110px; height: 110px; border-radius: 24px; background: var(--primary-color); display: flex; align-items: center; justify-content: center; color: white; font-size: 3rem; font-weight: 800; box-shadow: 0 8px 20px rgba(255,167,38,0.2);">
-                        ${userData.username.charAt(0).toUpperCase()}
+                    <div style="width: 120px; height: 120px; border-radius: 50%; background: white; border: 3px solid var(--primary-color); display: flex; align-items: center; justify-content: center; overflow: hidden; box-shadow: 0 10px 25px rgba(255,167,38,0.25); transition: all 0.3s ease;">
+                        <img src="/bee.png" alt="Profile Avatar" style="width: 75%; height: 75%; object-fit: contain;">
                     </div>
                     <div>
-                        <h3 style="font-size: 1.4rem; font-weight: 900; color: var(--text-main); margin-bottom: 6px;">${userData.full_name || userData.username}</h3>
-                        <p style="color: var(--text-muted); font-weight: 600; font-size: 0.9rem;">Cập nhật hồ sơ cá nhân và ảnh đại diện của bạn.</p>
+                        <h3 style="font-size: 1.6rem; font-weight: 900; color: var(--text-main); margin-bottom: 8px;">${userData.full_name || userData.username}</h3>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span class="user-role" style="background: var(--primary-color)15; color: var(--primary-dark); padding: 4px 14px; border-radius: 30px; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">Premium Plan</span>
+                            <span style="height: 4px; width: 4px; background: var(--text-light); border-radius: 50%;"></span>
+                            <span style="font-size: 0.9rem; color: var(--text-muted); font-weight: 600;">@${userData.username}</span>
+                        </div>
                     </div>
                 </div>
                 <form id="personal-form">

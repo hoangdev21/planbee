@@ -62,26 +62,54 @@ const planController = {
     updatePlan: async (req, res) => {
         try {
             const { id } = req.params;
-            const { title, description, start_time, end_time, color, status, priority } = req.body;
+            const updates = req.body;
             
-            const MySQLStart = formatDateForMySQL(start_time);
-            const MySQLEnd = formatDateForMySQL(end_time);
-
-            // Check for overlaps (excluding current plan)
-            const [overlaps] = await db.execute(
-                'SELECT title FROM plans WHERE user_id = ? AND id != ? AND start_time < ? AND end_time > ?',
-                [req.user.id, id, MySQLEnd, MySQLStart]
-            );
-
-            if (overlaps.length > 0) {
-                return res.status(400).json({ 
-                    message: `Cập nhật thất bại! Thời gian này bị trùng với kế hoạch: "${overlaps[0].title}".` 
-                });
+            // Build dynamic query
+            const fields = [];
+            const values = [];
+            
+            const allowedFields = ['title', 'description', 'start_time', 'end_time', 'color', 'status', 'priority'];
+            
+            for (const field of allowedFields) {
+                if (updates[field] !== undefined) {
+                    fields.push(`${field} = ?`);
+                    if (field === 'start_time' || field === 'end_time') {
+                        values.push(formatDateForMySQL(updates[field]));
+                    } else {
+                        values.push(updates[field]);
+                    }
+                }
             }
 
+            if (fields.length === 0) {
+                return res.status(400).json({ message: 'Không có dữ liệu cập nhật.' });
+            }
+
+            // Check for overlaps if time is updated
+            if (updates.start_time || updates.end_time) {
+                // We need the current or new values to check overlaps
+                const [current] = await db.execute('SELECT start_time, end_time FROM plans WHERE id = ?', [id]);
+                if (current.length > 0) {
+                    const MySQLStart = formatDateForMySQL(updates.start_time || current[0].start_time);
+                    const MySQLEnd = formatDateForMySQL(updates.end_time || current[0].end_time);
+                    
+                    const [overlaps] = await db.execute(
+                        'SELECT title FROM plans WHERE user_id = ? AND id != ? AND start_time < ? AND end_time > ?',
+                        [req.user.id, id, MySQLEnd, MySQLStart]
+                    );
+
+                    if (overlaps.length > 0) {
+                        return res.status(400).json({ 
+                            message: `Cập nhật thất bại! Thời gian này bị trùng với kế hoạch: "${overlaps[0].title}".` 
+                        });
+                    }
+                }
+            }
+
+            values.push(id, req.user.id);
             const [result] = await db.execute(
-                'UPDATE plans SET title = ?, description = ?, start_time = ?, end_time = ?, color = ?, status = ?, priority = ? WHERE id = ? AND user_id = ?',
-                [title, description, MySQLStart, MySQLEnd, color, status || 'pending', priority || 'medium', id, req.user.id]
+                `UPDATE plans SET ${fields.join(', ')} WHERE id = ? AND user_id = ?`,
+                values
             );
 
             if (result.affectedRows === 0) {

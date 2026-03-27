@@ -30,8 +30,8 @@ export const renderSidebar = (container, activePage) => {
             
             <div class="sidebar-footer" style="padding: 24px; border-top: 1px solid var(--border-color); background: var(--card-bg); margin: 0 -24px -24px -24px; border-radius: 0 0 0 24px;">
                 <div class="user-profile-summary" style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px; padding: 14px; background: rgba(255,167,38,0.04); border-radius: 16px; border: 1.5px solid rgba(255,167,38,0.1); transition: all 0.3s ease;">
-                    <div style="width: 42px; height: 42px; border-radius: 12px; background: var(--primary-color); display: flex; align-items: center; justify-content: center; color: white; font-weight: 800; font-size: 1.2rem; box-shadow: 0 4px 10px rgba(255,167,38,0.3);">
-                        ${userName.charAt(0).toUpperCase()}
+                    <div style="width: 48px; height: 48px; border-radius: 50%; background: white; border: 2px solid var(--primary-color); display: flex; align-items: center; justify-content: center; overflow: hidden; box-shadow: 0 4px 12px rgba(255,167,38,0.2); transition: all 0.3s ease;">
+                        <img src="/bee.png" alt="User Avatar" style="width: 75%; height: 75%; object-fit: contain;">
                     </div>
                     <div style="flex: 1; overflow: hidden;">
                         <div style="font-weight: 800; font-size: 0.95rem; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${userName}</div>

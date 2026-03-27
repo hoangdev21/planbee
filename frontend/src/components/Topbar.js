@@ -79,7 +79,7 @@ export const renderTopbar = (container) => {
                 <div class="user-profile-wrapper" style="position: relative;">
                     <div id="user-profile" class="user-profile-card">
                         <div class="user-avatar">
-                            ${userName.charAt(0).toUpperCase()}
+                            <img src="/bee.png" alt="Avatar">
                         </div>
                         <div class="user-meta" style="display: flex; flex-direction: column;">
                             <span class="user-name">${userName}</span>
@@ -156,17 +156,21 @@ export const renderTopbar = (container) => {
                 box-shadow: 0 4px 12px rgba(0,0,0,0.05);
             }
             .user-avatar {
-                width: 36px;
-                height: 36px;
-                border-radius: 10px;
-                background: var(--primary-color);
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                background: white;
+                border: 2px solid var(--primary-color);
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                color: white;
-                font-weight: 800;
-                font-size: 1.1rem;
-                box-shadow: 0 4px 10px rgba(255,167,38,0.3);
+                overflow: hidden;
+                box-shadow: 0 4px 10px rgba(255,167,38,0.2);
+            }
+            .user-avatar img {
+                width: 75%;
+                height: 75%;
+                object-fit: contain;
             }
             .user-name {
                 font-size: 0.9rem;

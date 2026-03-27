@@ -114,7 +114,7 @@ export const renderTasks = async (container) => {
                                     const st = stMap[item.category] || stMap.upcoming;
                                     
                                     const formatTime = (d) => d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-                                    const formatDate = (d) => d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+                                    const formatDate = (d) => `Ngày ${d.getDate().toString().padStart(2, '0')}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getFullYear()}`;
                                     
                                     // Complex Time Display
                                     let timeDisplay = '';
@@ -138,8 +138,8 @@ export const renderTasks = async (container) => {
                                         <tr>
                                             <td>
                                                 <div style="display: flex; align-items: center; gap: 12px;">
-                                                    <div class="item-icon-circle ${item.itemType}">
-                                                        <i class="fas ${item.itemType === 'plan' ? 'fa-calendar-alt' : 'fa-check-double'}"></i>
+                                                    <div class="item-icon-view" style="background: transparent !important; border: none !important;">
+                                                        <img src="${item.status === 'completed' ? '/complete.png?v=2' : '/calendar.png?v=2'}" class="item-type-icon-new" alt="icon">
                                                     </div>
                                                     <div style="display: flex; flex-direction: column;">
                                                         <span class="item-title">${item.title}</span>
@@ -217,7 +217,7 @@ export const renderTasks = async (container) => {
                     <div class="modal-content">
                         <div class="modal-header">
                             <div style="display: flex; align-items: center; gap: 12px;">
-                                <div id="modal-type-icon" class="item-icon-circle small"></div>
+                                <div id="modal-type-icon" class="item-icon-view small"></div>
                                 <h3 id="modal-title-text">Chi tiết</h3>
                             </div>
                             <button id="close-modal-top" class="modal-close-btn"><i class="fas fa-times"></i></button>
@@ -328,18 +328,27 @@ export const renderTasks = async (container) => {
                         text-overflow: ellipsis;
                         letter-spacing: -0.2px;
                     }
-                    .item-icon-circle {
+                    .item-icon-view {
                         min-width: 48px;
                         height: 48px;
-                        border-radius: 14px;
                         display: flex;
                         align-items: center;
                         justify-content: center;
-                        font-size: 1.3rem;
+                        background: transparent !important;
+                        border: none !important;
                     }
-                    .item-icon-circle.plan { background: rgba(9, 132, 227, 0.1); color: var(--info); }
-                    .item-icon-circle.task { background: rgba(108, 92, 231, 0.1); color: #6c5ce7; }
-                    .item-icon-circle.small { width: 32px; height: 32px; font-size: 0.9rem; }
+                    .item-type-icon-new {
+                        width: 38px;
+                        height: 38px;
+                        object-fit: contain;
+                        filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1));
+                        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                    }
+                    .tasks-table tr:hover .item-type-icon-new {
+                        transform: scale(1.15) rotate(5deg);
+                    }
+                    .item-icon-view.small { width: 36px; height: 36px; }
+                    .item-icon-view.small .item-type-icon-new { width: 28px; height: 28px; }
                     
                     .item-tag {
                         font-size: 0.75rem;
@@ -501,8 +510,8 @@ export const renderTasks = async (container) => {
                 const typeIcon = document.getElementById('modal-type-icon');
                 
                 titleText.textContent = item.itemType === 'plan' ? 'Kế hoạch chi tiết' : 'Nhiệm vụ chi tiết';
-                typeIcon.className = `item-icon-circle small ${item.itemType}`;
-                typeIcon.innerHTML = `<i class="fas ${item.itemType === 'plan' ? 'fa-calendar-alt' : 'fa-check-double'}"></i>`;
+                typeIcon.className = `item-icon-view small`;
+                typeIcon.innerHTML = `<img src="${item.status === 'completed' ? '/complete.png?v=2' : '/calendar.png?v=2'}" class="item-type-icon-new" alt="icon">`;
 
                 const stLabel = item.category === 'in-progress' ? 'Đang làm' : item.category === 'completed' ? 'Hoàn thành' : item.category === 'cancelled' ? 'Đã hủy' : 'Sắp tới';
                 const stColor = item.category === 'in-progress' ? 'var(--info)' : item.category === 'completed' ? 'var(--success)' : item.category === 'cancelled' ? 'var(--danger)' : 'var(--primary-color)';

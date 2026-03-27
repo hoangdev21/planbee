@@ -44,14 +44,26 @@ const dashboardController = {
                 FROM habits WHERE user_id = ?
             `, [userId]);
 
-            // 4. Productivity (last 7 days completed tasks)
+            // 4. Productivity (Monday to Sunday of current week)
             const [productivity] = await db.execute(`
-                SELECT DATE(created_at) as date, COUNT(*) as count 
-                FROM tasks 
-                WHERE user_id = ? AND status = 'completed' 
-                AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-                GROUP BY DATE(created_at)
-            `, [userId]);
+                SELECT date, SUM(count) as count FROM (
+                    SELECT DATE(updated_at) as date, COUNT(*) as count 
+                    FROM tasks 
+                    WHERE user_id = ? AND status = 'completed' 
+                    AND YEARWEEK(updated_at, 1) = YEARWEEK(NOW(), 1)
+                    GROUP BY DATE(updated_at)
+                    
+                    UNION ALL
+                    
+                    SELECT DATE(updated_at) as date, COUNT(*) as count 
+                    FROM plans 
+                    WHERE user_id = ? AND status = 'completed' 
+                    AND YEARWEEK(updated_at, 1) = YEARWEEK(NOW(), 1)
+                    GROUP BY DATE(updated_at)
+                ) combined 
+                GROUP BY date
+                ORDER BY date ASC
+            `, [userId, userId]);
 
             res.json({
                 stats: combinedStats,

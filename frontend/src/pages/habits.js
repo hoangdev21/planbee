@@ -87,8 +87,8 @@ const updateHabitsUI = (container) => {
                         return `
                             <div class="habit-card-ultra premium ${isDone ? 'is-done' : ''}">
                                 <div class="card-header">
-                                    <div class="habit-icon-box" style="background: ${isDone ? 'var(--success)' : 'rgba(255, 167, 38, 0.1)'};">
-                                        <i class="fas ${isDone ? 'fa-check-circle' : 'fa-bolt'}"></i>
+                                    <div class="habit-icon-box" style="background: transparent !important;">
+                                        <img src="${isDone ? '/complete.png' : (habit.frequency === 'daily' ? '/lightning.png' : '/thunder.png')}" class="habit-icon-img" alt="habit-icon">
                                     </div>
                                     <h4 class="habit-title">${habit.title}</h4>
                                     <!-- Mini Edit icon could go here if needed -->
@@ -228,7 +228,13 @@ const updateHabitsUI = (container) => {
             .habit-card-ultra:hover { transform: translateY(-10px) scale(1.02); box-shadow: var(--shadow-lg); border-color: var(--primary-color); }
             
             .card-header { display: flex; align-items: center; gap: 16px; position: relative; }
-            .habit-icon-box { width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; color: var(--primary-color); }
+            .habit-icon-box { width: 54px; height: 54px; display: flex; align-items: center; justify-content: center; }
+            .habit-icon-img { 
+                width: 42px; height: 42px; object-fit: contain; 
+                filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1));
+                transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            }
+            .habit-card-ultra:hover .habit-icon-img { transform: scale(1.2) rotate(3deg); }
             .habit-title { font-size: 1.15rem; font-weight: 800; color: var(--text-main); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
             .delete-btn-mini { background: none; border: none; font-size: 1.2rem; color: var(--text-light); opacity: 0.4; cursor: pointer; transition: 0.2s; }
             .delete-btn-mini:hover { color: var(--danger); opacity: 1; }
