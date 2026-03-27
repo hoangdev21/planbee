@@ -94,6 +94,12 @@ const authController = {
                 { expiresIn: '7d' }
             );
 
+            // Fetch user settings
+            const [settings] = await db.execute(
+                'SELECT * FROM user_settings WHERE user_id = ?',
+                [user.id]
+            );
+
             res.cookie('token', token, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
@@ -103,6 +109,7 @@ const authController = {
             res.json({
                 message: 'Đăng nhập thành công!',
                 user: { id: user.id, username: user.username, email: user.email },
+                settings: settings[0] || { theme: 'light', accent_color: '#FFA726' },
                 token
             });
         } catch (error) {

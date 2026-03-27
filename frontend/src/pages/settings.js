@@ -310,8 +310,8 @@ export const renderSettings = async (container) => {
                     api.showBeeAlert('Đã cập nhật màu chủ đạo mới!');
                     userSettings.accent_color = color;
                     
-                    // Update CSS variable immediately for preview
-                    document.documentElement.style.setProperty('--primary-color', color);
+                    // Dispatch global event for immediate update
+                    window.dispatchEvent(new CustomEvent('accent-color-changed', { detail: { color: color } }));
                     
                     render();
                 } catch (err) { api.showBeeAlert(err.message); }

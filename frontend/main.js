@@ -6,11 +6,13 @@ import { initChatWidget } from './src/components/ChatWidget.js';
 const state = {
     user: null, // Logged in user info
     theme: localStorage.getItem('theme') || 'light',
+    accent_color: localStorage.getItem('accent_color') || '#FFA726',
     notifications: [],
 };
 
-// Initialize theme
+// Initialize theme & color
 document.documentElement.setAttribute('data-theme', state.theme);
+document.documentElement.style.setProperty('--primary-color', state.accent_color);
 
 // Initialize Chat Bot
 initChatWidget();
@@ -140,6 +142,12 @@ window.addEventListener('theme-changed', (e) => {
     state.theme = e.detail.theme;
     document.documentElement.setAttribute('data-theme', state.theme);
     localStorage.setItem('theme', state.theme);
+});
+
+window.addEventListener('accent-color-changed', (e) => {
+    state.accent_color = e.detail.color;
+    document.documentElement.style.setProperty('--primary-color', state.accent_color);
+    localStorage.setItem('accent_color', state.accent_color);
 });
 
 // Event listeners

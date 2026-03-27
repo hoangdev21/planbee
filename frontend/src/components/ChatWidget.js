@@ -475,12 +475,12 @@ const addStyles = () => {
     style.innerHTML = `
         #bee-chat-widget { position: fixed; bottom: 40px; right: 40px; z-index: 10005; font-family: 'Inter', sans-serif; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .chat-widget-closed { width: 80px; height: 80px; cursor: pointer; }
-        .chat-bubble-trigger { width: 100%; height: 100%; background: linear-gradient(135deg, #FFB74D, #FFA726); border-radius: 24px; box-shadow: 0 12px 24px rgba(255,167,38,0.3); display: flex; align-items: center; justify-content: center; position: relative; border: 3px solid white; transition: all 0.3s ease; }
+        .chat-bubble-trigger { width: 100%; height: 100%; background: linear-gradient(135deg, #FFB74D, #FFA726); border-radius: 50%; box-shadow: 0 12px 24px rgba(255,167,38,0.3); display: flex; align-items: center; justify-content: center; position: relative; border: 3px solid white; transition: all 0.3s ease; }
         .bee-bubble-icon { width: 50px; height: 50px; transition: 0.3s; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1)); }
         .chat-bubble-trigger:hover { transform: translateY(-5px) scale(1.05); box-shadow: 0 18px 36px rgba(255,167,38,0.4); }
         .bubble-notif { position: absolute; top: -5px; right: -5px; background: #ef4444; color: white; min-width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 900; border: 2.5px solid white; box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
 
-        .chat-widget-expanded { width: 450px; height: 680px; background: var(--card-bg); border-radius: 24px; box-shadow: var(--shadow-lg); overflow: hidden; display: flex; border: 1px solid var(--border-color); }
+        .chat-widget-expanded { width: 450px; height: 680px; background: var(--card-bg); border-radius: 32px; box-shadow: var(--shadow-lg); overflow: hidden; display: flex; border: 1px solid var(--border-color); }
         .chat-widget-expanded.fullscreen { width: 100vw; height: 100vh; position: fixed; top: 0; left: 0; bottom: 0; right: 0; border-radius: 0; z-index: 10000; }
         
         .chat-container-inner { width: 100%; height: 100%; display: flex; flex-direction: column; }

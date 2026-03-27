@@ -62,6 +62,16 @@ export const renderLogin = (container) => {
             localStorage.setItem('token', data.token);
             localStorage.setItem('user', JSON.stringify(data.user));
             
+            const theme = data.settings.theme || 'light';
+            const accent_color = data.settings.accent_color || '#FFA726';
+            
+            localStorage.setItem('theme', theme);
+            localStorage.setItem('accent_color', accent_color);
+            
+            // Dispatch events to update main.js state and DOM
+            window.dispatchEvent(new CustomEvent('theme-changed', { detail: { theme } }));
+            window.dispatchEvent(new CustomEvent('accent-color-changed', { detail: { color: accent_color } }));
+            
             navigate('#/dashboard');
         } catch (error) {
             errorEl.innerText = error.message;
