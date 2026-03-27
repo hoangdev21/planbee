@@ -1,6 +1,22 @@
+html {
+  zoom: 0.8;
+  min-height: 125vh;
+  height: 125vh;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  min-height: 125vh;
+  height: 125vh;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
 .layout-container {
     display: flex;
-    min-height: 100vh;
+    min-height: 125vh;
     background-color: var(--bg-color);
 }
 
@@ -9,7 +25,7 @@ aside#sidebar {
     background-color: var(--sidebar-bg);
     border-right: 1px solid var(--border-color);
     position: fixed;
-    height: 100vh;
+    height: 125vh;
     left: 0;
     top: 0;
     z-index: 1000;
@@ -50,7 +66,7 @@ main#page-content {
 
 /* Landing Page Styles */
 .landing-hero {
-    height: 100vh;
+    height: 125vh;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -105,7 +121,7 @@ main#page-content {
 
 /* Auth Pages */
 .auth-container {
-    height: 100vh;
+    height: 125vh;
     display: flex;
     justify-content: center;
     align-items: center;

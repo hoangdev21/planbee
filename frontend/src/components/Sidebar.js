@@ -1,6 +1,9 @@
 import { navigate } from '../../main.js';
 
 export const renderSidebar = (container, activePage) => {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const userName = user.username || localStorage.getItem('user_name') || 'Người dùng';
+    
     const menuItems = [
         { id: 'dashboard', label: 'Tổng quan', icon: 'fas fa-th-large', path: '#/dashboard' },
         { id: 'tasks', label: 'Nhiệm vụ', icon: 'fas fa-list-check', path: '#/tasks' },
@@ -15,42 +18,63 @@ export const renderSidebar = (container, activePage) => {
                 <img src="/logo.png" alt="PlanBee Logo" style="height: 60px; object-fit: contain;">
             </div>
             
-            <nav class="sidebar-nav" style="flex: 1;">
+            <nav class="sidebar-nav" style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
                 ${menuItems.map(item => `
                     <a href="${item.path}" class="nav-item ${activePage === item.id ? 'active' : ''}" 
-                       style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 8px; margin-bottom: 4px; text-decoration: none; color: ${activePage === item.id ? 'white' : 'var(--text-muted)'}; background: ${activePage === item.id ? 'var(--primary-color)' : 'transparent'}; transition: all var(--transition-fast); font-weight: 500;">
-                        <i class="${item.icon}" style="width: 20px; text-align: center;"></i>
+                       style="display: flex; align-items: center; gap: 14px; padding: 14px 18px; border-radius: 14px; text-decoration: none; color: ${activePage === item.id ? 'white' : 'var(--text-muted)'}; background: ${activePage === item.id ? 'var(--primary-color)' : 'transparent'}; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); font-weight: 700; font-size: 0.95rem; box-shadow: ${activePage === item.id ? '0 8px 20px rgba(255,167,38,0.25)' : 'none'}; border: 1px solid ${activePage === item.id ? 'rgba(255,167,38,0.2)' : 'transparent'};">
+                        <i class="${item.icon}" style="width: 22px; text-align: center; font-size: 1.1rem;"></i>
                         <span>${item.label}</span>
                     </a>
                 `).join('')}
             </nav>
             
-            <div class="sidebar-footer" style="padding-top: var(--spacing-md); border-top: 1px solid var(--border-color);">
-                <button id="logout-btn" style="width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 8px; color: var(--danger); font-weight: 500; font-family: inherit;">
-                    <i class="fas fa-sign-out-alt" style="width: 20px; text-align: center;"></i>
-                    <span>Đăng xuất</span>
+            <div class="sidebar-footer" style="padding: 24px; border-top: 1px solid var(--border-color); background: var(--card-bg); margin: 0 -24px -24px -24px; border-radius: 0 0 0 24px;">
+                <div class="user-profile-summary" style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px; padding: 14px; background: rgba(255,167,38,0.04); border-radius: 16px; border: 1.5px solid rgba(255,167,38,0.1); transition: all 0.3s ease;">
+                    <div style="width: 42px; height: 42px; border-radius: 12px; background: var(--primary-color); display: flex; align-items: center; justify-content: center; color: white; font-weight: 800; font-size: 1.2rem; box-shadow: 0 4px 10px rgba(255,167,38,0.3);">
+                        ${userName.charAt(0).toUpperCase()}
+                    </div>
+                    <div style="flex: 1; overflow: hidden;">
+                        <div style="font-weight: 800; font-size: 0.95rem; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${userName}</div>
+                        <div style="font-size: 0.7rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Premium Plan</div>
+                    </div>
+                </div>
+                <button id="logout-btn" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 12px; padding: 14px; border-radius: 14px; color: var(--danger); font-weight: 800; font-family: inherit; background: rgba(214, 48, 49, 0.05); border: 1.5px solid rgba(214, 48, 49, 0.1); cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);">
+                    <i class="fas fa-sign-out-alt" style="font-size: 1rem;"></i>
+                    <span style="font-size: 0.85rem; letter-spacing: 0.08em; font-weight: 800;">ĐĂNG XUẤT</span>
                 </button>
             </div>
         </div>
+        <style>
+            #logout-btn:hover { 
+                background: var(--danger); 
+                color: white; 
+                transform: translateY(-3px); 
+                box-shadow: 0 8px 20px rgba(214, 48, 49, 0.25); 
+                border-color: var(--danger);
+            }
+            #logout-btn:active { transform: translateY(-1px); }
+            
+            .user-profile-summary:hover { 
+                border-color: var(--primary-color); 
+                transform: translateY(-2px); 
+                box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
+                cursor: pointer; 
+                background: white;
+            }
+            
+            .nav-item:not(.active):hover {
+                background: rgba(255,167,38,0.08) !important;
+                color: var(--primary-color) !important;
+                transform: translateX(5px);
+                border-color: rgba(255,167,38,0.1);
+            }
+        </style>
     `;
-
-    // Add hover effects via CSS if not already there, or use JS for simple hover
-    const navItems = container.querySelectorAll('.nav-item');
-    navItems.forEach(item => {
-        if (!item.classList.contains('active')) {
-            item.onmouseenter = () => {
-                item.style.background = 'var(--primary-light)';
-                item.style.color = 'var(--primary-color)';
-            };
-            item.onmouseleave = () => {
-                item.style.background = 'transparent';
-                item.style.color = 'var(--text-muted)';
-            };
-        }
-    });
 
     document.getElementById('logout-btn').onclick = () => {
         localStorage.removeItem('token');
-        navigate('#/');
+        localStorage.removeItem('user');
+        navigate('#/login');
     };
 };
+

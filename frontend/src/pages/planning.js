@@ -21,7 +21,32 @@ export const renderPlanning = async (container, params = {}) => {
         const [tasksRes, habitsRes, plansRes] = await Promise.all([
             api.get('/tasks/all'), api.get('/habits/all'), api.get('/plans/all')
         ]);
-        renderPlanningUI(container, tasksRes.tasks, habitsRes.habits, plansRes.plans, params);
+        
+        let finalTasks = tasksRes.tasks;
+        let finalPlans = plansRes.plans;
+
+        // GHOST ITEM LOGIC: If we are here for a deletion effect but item is gone from DB
+        if (params.isDelete === 'true' && params.id) {
+            const existsInPlans = finalPlans.some(p => p.id == params.id);
+            const existsInTasks = finalTasks.some(t => t.id == params.id);
+            
+            if (!existsInPlans && !existsInTasks) {
+                // Create a ghost plan or task based on tags
+                if (params.tag === 'delete_plan' || params.start_time) {
+                    finalPlans.push({
+                        id: params.id,
+                        title: params.title || 'Đang xóa...',
+                        start_time: params.start_time || `${params.date} ${params.time || '12:00:00'}`,
+                        end_time: params.end_time || `${params.date} ${params.time ? parseInt(params.time)+1 : '13'}:00:00`,
+                        color: params.color || '#FF5252',
+                        status: 'pending',
+                        isGhost: true
+                    });
+                }
+            }
+        }
+
+        renderPlanningUI(container, finalTasks, habitsRes.habits, finalPlans, params);
     } catch (error) {
         container.innerHTML = `<div style="padding: 40px; text-align: center; color: var(--danger);">Lỗi hệ thống: ${error.message}</div>`;
     }
@@ -63,12 +88,12 @@ const renderPlanningUI = (container, tasks, habits, plans, params = {}) => {
 
             ${renderOverdueBanner(tasks)}
 
-            <div id="calendar-view-container" style="background: var(--card-bg); border-radius: 20px; border: 1.5px solid var(--border-color); height: calc(100vh - 220px); overflow: hidden; position: relative;">
+            <div id="calendar-view-container" style="background: var(--card-bg); border-radius: 20px; border: 1.5px solid var(--border-color); height: calc(125vh - 320px); overflow: hidden; position: relative;">
                 ${renderCurrentView(tasks, habits, plans)}
             </div>
 
             <div id="plan-modal" class="modal-overlay" style="display: none;">
-                <div class="modal-content" style="max-width: 550px; border-radius: 28px; padding: 0; overflow: hidden; box-shadow: var(--shadow-lg);">
+                <div class="modal-content" style="max-width: 750px; min-height: 550px; border-radius: 28px; padding: 0; overflow: hidden; box-shadow: var(--shadow-lg); display: flex; flex-direction: column;">
                     <div id="modal-tabs" style="display: flex; background: var(--sidebar-bg); border-bottom: 2px solid var(--border-color);">
                         <div class="modal-tab-btn active" data-tab="view" style="flex:1; padding:20px; text-align:center; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:12px; font-size:1rem;">
                             <i class="fas fa-info-circle"></i> Thông tin
@@ -107,6 +132,9 @@ const renderPlanningUI = (container, tasks, habits, plans, params = {}) => {
             .month-day-number.today { color: var(--primary-color); font-weight: 900; }
             .month-event-badge { font-size: 0.72rem; font-weight: 800; padding: 4px 8px; border-radius: 6px; color: white; margin-bottom: 3px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; border-left: 3.5px solid rgba(0,0,0,0.15); width: 100%; display: flex; align-items: center; justify-content: space-between; }
             .month-event-badge.done { opacity: 0.6; text-decoration: line-through; }
+            .task-pill.done { opacity: 0.5; text-decoration: line-through; filter: grayscale(1); }
+            .task-pill.overdue { box-shadow: 0 2px 8px rgba(214,48,49,0.15); animation: pulse-danger 2s infinite; }
+            @keyframes pulse-danger { 0% { box-shadow: 0 0 0 0 rgba(214,48,49,0.2); } 70% { box-shadow: 0 0 0 6px rgba(214,48,49,0); } 100% { box-shadow: 0 0 0 0 rgba(214,48,49,0); } }
         </style>
     `;
 
@@ -202,7 +230,7 @@ const renderPlanningUI = (container, tasks, habits, plans, params = {}) => {
     document.getElementById('today-btn').onclick = () => { currentDate = new Date(); renderPlanningUI(container, tasks, habits, plans); };
 
     // AUTO-SCROLL LOGIC: Scroll to specific time or title
-    if (params.time || params.title) {
+    if ((params.time || params.title) && !params.noScroll) {
         setTimeout(() => {
             const scrollContainer = container.querySelector('.calendar-grid-scroll');
             if (!scrollContainer) return;
@@ -225,7 +253,7 @@ const renderPlanningUI = (container, tasks, habits, plans, params = {}) => {
             if (targetY > 0) {
                 scrollContainer.scroll({ top: targetY, behavior: 'smooth' });
             }
-        }, 50);
+        }, 250);
     }
 
     window.planningContainer = container;
@@ -241,8 +269,23 @@ const changeDate = (d) => { if (currentView === 'day') currentDate.setDate(curre
 const getStartOfWeek = (d) => { const date = new Date(d); const day = date.getDay(); const diff = date.getDate() - day + (day === 0 ? -6 : 1); return new Date(date.setDate(diff)); };
 
 const renderOverdueBanner = (tasks) => {
-    const c = tasks.filter(t => t.status !== 'completed' && t.due_date && new Date(t.due_date) < new Date()).length;
-    return c > 0 ? `<div style="background:rgba(214,48,49,0.06); padding:10px 20px; border-radius:10px; color:var(--danger); font-weight:800; font-size:0.85rem; margin-bottom:12px;"><i class="fas fa-exclamation-triangle"></i> Cảnh báo: Bạn có việc quá hạn!</div>` : '';
+    const overdue = tasks.filter(t => t.status !== 'completed' && t.due_date && new Date(t.due_date) < new Date());
+    const c = overdue.length;
+    if (c === 0) return '';
+    
+    // Show names of first 2 overdue tasks
+    const names = overdue.slice(0, 2).map(t => t.title).join(', ');
+    const more = c > 2 ? ` và ${c - 2} việc khác` : '';
+    
+    return `
+        <div class="overdue-banner" style="background:rgba(214,48,49,0.06); padding:12px 20px; border-radius:12px; color:var(--danger); font-weight:800; font-size:0.88rem; margin-bottom:16px; border-left:4px solid var(--danger); display:flex; align-items:center; justify-content:space-between;">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <i class="fas fa-exclamation-circle" style="font-size:1.1rem;"></i>
+                <span>Bạn có ${c} việc quá hạn: <strong>${names}${more}</strong></span>
+            </div>
+            <button onclick="window.location.hash = '#tasks'" style="background:var(--danger); color:white; border:none; padding:6px 14px; border-radius:8px; font-size:0.75rem; font-weight:900; cursor:pointer; transition: 0.2s;" onmouseover="this.style.opacity=0.9" onmouseout="this.style.opacity=1">XEM TẤT CẢ</button>
+        </div>
+    `;
 };
 
 const renderCurrentView = (tasks, habits, plans) => {
@@ -254,8 +297,27 @@ const renderCurrentView = (tasks, habits, plans) => {
 const renderDayView = (t, h, p) => {
     const ds = currentDate.toISOString().slice(0, 10);
     const dayPlans = p.filter(x => ds >= x.start_time.slice(0,10) && ds <= x.end_time.slice(0,10));
+    const dayTasks = t.filter(x => (x.due_date && x.due_date.startsWith(ds)) || (x.status !== 'completed' && x.due_date && new Date(x.due_date) < new Date()));
     const allday = dayPlans.filter(x => getPlanType(x) === 'all-day'), hourly = dayPlans.filter(x => getPlanType(x) === 'hourly');
-    let html = `<div style="padding:16px 24px; border-bottom:2px solid var(--border-color); background:var(--sidebar-bg); display:flex; flex-direction:column; gap:12px;"><div style="display:flex; gap:10px; align-items:center;"><small style="font-weight:900; opacity:0.6;">THÓI QUEN:</small>${h.map(x=>`<div class="habit-pill ${x.last_completed&&x.last_completed.startsWith(ds)?'done':'not-done'}">${x.title}</div>`).join('')}</div>${allday.length > 0 ? `<div style="display:flex; gap:14px; align-items:center; flex-wrap:wrap;"><small style="font-weight:900; opacity:0.6;">DÀI NGÀY:</small>${allday.map(x=>{const done = x.status === 'completed'; return `<div class="allday-pill ${done?'done':''}" data-id="${x.id}" style="background:${x.color};"><i class="fas ${done?'fa-check-circle':'fa-calendar-check'}" style="font-size:0.65rem; opacity:0.8;"></i> ${x.title}</div>`}).join('')}</div>` : ''}</div>`;
+    
+    let html = `<div style="padding:16px 24px; border-bottom:2px solid var(--border-color); background:var(--sidebar-bg); display:flex; flex-direction:column; gap:12px;">
+        <div style="display:flex; gap:10px; align-items:center;">
+            <small style="font-weight:900; opacity:0.6;">THÓI QUEN:</small>
+            ${h.map(x=>`<div class="habit-pill ${x.last_completed&&x.last_completed.startsWith(ds)?'done':'not-done'}">${x.title}</div>`).join('')}
+        </div>
+        ${dayTasks.length > 0 ? `
+            <div style="display:flex; gap:14px; align-items:center; flex-wrap:wrap;">
+                <small style="font-weight:900; opacity:0.6;">NHIỆM VỤ:</small>
+                ${dayTasks.map(x=>{
+                    const isOverdue = new Date(x.due_date) < new Date() && x.status !== 'completed';
+                    return `<div class="task-pill task-event ${x.status === 'completed' ? 'done' : ''} ${isOverdue ? 'overdue' : ''}" data-id="${x.id}" style="border-left: 3.5px solid ${isOverdue ? 'var(--danger)' : '#6c5ce7'}; background: ${isOverdue ? 'rgba(214,48,49,0.1)' : 'rgba(108,92,231,0.1)'}; color: ${isOverdue ? 'var(--danger)' : '#6c5ce7'}; display:flex; align-items:center; gap:6px; padding: 4px 12px; border-radius:20px; font-size: 0.75rem; font-weight: 800; cursor:pointer;">
+                        <i class="fas ${isOverdue ? 'fa-clock' : 'fa-check-double'}" style="font-size:0.65rem;"></i> ${x.title} ${isOverdue ? '<span style="opacity:0.7; font-size:0.65rem;">(Quá hạn)</span>' : ''}
+                    </div>`
+                }).join('')}
+            </div>
+        ` : ''}
+        ${allday.length > 0 ? `<div style="display:flex; gap:14px; align-items:center; flex-wrap:wrap;"><small style="font-weight:900; opacity:0.6;">DÀI NGÀY:</small>${allday.map(x=>{const done = x.status === 'completed'; return `<div class="allday-pill ${done?'done':''}" data-id="${x.id}" style="background:${x.color};"><i class="fas ${done?'fa-check-circle':'fa-calendar-check'}" style="font-size:0.65rem; opacity:0.8;"></i> ${x.title}</div>`}).join('')}</div>` : ''}
+    </div>`;
     const rowH = 65;
     let grid = Array(24).fill(0).map((_,h)=>`<div class="time-row" style="height:${rowH}px;"><div class="time-label">${h}:00</div><div class="time-slot" style="background:${h%2===0?'rgba(0,0,0,0.01)':'transparent'}"></div></div>`).join('');
     let items = hourly.map(x => {
@@ -281,7 +343,15 @@ const renderDayView = (t, h, p) => {
 const renderWeekView = (t, h, p) => {
     const start = getStartOfWeek(currentDate), rowH = 60, weeklyAllDay = p.filter(x => getPlanType(x) === 'all-day');
     let header = `<div style="display:grid; grid-template-columns: 80px repeat(7, 1fr); border-bottom:1.5px solid var(--border-color); position:sticky; top:0; z-index:100; background:var(--card-bg);"><div style="border-right:1px solid var(--border-color)"></div>${['T2','T3','T4','T5','T6','T7','CN'].map((l,i)=>{const d=new Date(start); d.setDate(start.getDate()+i); const active=d.toISOString().slice(0,10)===new Date().toISOString().slice(0,10); return `<div style="padding:10px; text-align:center; border-right:1px solid var(--border-color); ${active?'background:var(--primary-light); color:var(--primary-color);':''}"><small style="opacity:0.6; font-weight:800">${l}</small><div style="font-weight:900; font-size:1.1rem">${d.getDate()}</div></div>`;}).join('')}</div>`;
-    let alldayS = `<div style="display:grid; grid-template-columns: 80px repeat(7, 1fr); border-bottom:2px solid var(--border-color); background:var(--sidebar-bg); min-height:48px; padding:8px 0;"><div style="border-right:1px solid var(--border-color); display:flex; align-items:center; justify-content:center;"><i class="fas fa-layer-group" style="opacity:0.3; font-size:0.9rem;"></i></div>${Array(7).fill(0).map((_,i)=>{const ds=new Date(new Date(start).setDate(start.getDate()+i)).toISOString().slice(0,10); const dayA=weeklyAllDay.filter(x=>ds>=x.start_time.slice(0,10)&&ds<=x.end_time.slice(0,10)); return `<div style="border-right:1px solid var(--border-color); padding:0 6px; display:flex; flex-direction:column; gap:4px;">${dayA.map(x=>{const s=x.start_time.slice(0,10)===ds, e=x.end_time.slice(0,10)===ds; return `<div class="allday-pill" data-id="${x.id}" style="background:${x.color}; width:100%; font-size:0.65rem; border-radius:${s?'20px 0 0 20px':e?'0 20px 20px 0':'0'}; border-left:${s?'3px solid rgba(0,0,0,0.15)':'none'}; box-shadow:none;">${s?x.title:'&nbsp;'}</div>`;}).join('')}</div>`;}).join('')}</div>`;
+    let alldayS = `<div style="display:grid; grid-template-columns: 80px repeat(7, 1fr); border-bottom:2px solid var(--border-color); background:var(--sidebar-bg); min-height:48px; padding:8px 0;"><div style="border-right:1px solid var(--border-color); display:flex; align-items:center; justify-content:center;"><i class="fas fa-layer-group" style="opacity:0.3; font-size:0.9rem;"></i></div>${Array(7).fill(0).map((_,i)=>{
+        const d = new Date(start); d.setDate(start.getDate()+i); const ds = d.toISOString().slice(0,10); 
+        const dayA = weeklyAllDay.filter(x=>ds>=x.start_time.slice(0,10)&&ds<=x.end_time.slice(0,10));
+        const dayT = t.filter(x => x.due_date && x.due_date.startsWith(ds));
+        return `<div style="border-right:1px solid var(--border-color); padding:0 6px; display:flex; flex-direction:column; gap:4px;">
+            ${dayT.map(x => `<div class="task-pill task-event ${x.status==='completed'?'done':''}" data-id="${x.id}" style="width:100%; font-size:0.6rem; padding:2px 6px; border-radius:4px; background:rgba(108,92,231,0.1); color:#6c5ce7; border-left:2.5px solid #6c5ce7; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${x.title}</div>`).join('')}
+            ${dayA.map(x=>{const s=x.start_time.slice(0,10)===ds, e=x.end_time.slice(0,10)===ds; return `<div class="allday-pill" data-id="${x.id}" style="background:${x.color}; width:100%; font-size:0.65rem; border-radius:${s?'20px 0 0 20px':e?'0 20px 20px 0':'0'}; border-left:${s?'3px solid rgba(0,0,0,0.15)':'none'}; box-shadow:none;">${s?x.title:'&nbsp;'}</div>`;}).join('')}
+        </div>`;
+    }).join('')}</div>`;
     let grid = `<div class="calendar-grid-scroll" style="display:grid; grid-template-columns: 80px repeat(7, 1fr); overflow-y:auto; flex:1; position:relative; max-height:${24 * rowH}px;"><div>${Array(24).fill(0).map((_,h)=>`<div style="height:${rowH}px; border-bottom:1px solid var(--border-color); text-align:right; padding:12px; font-size:0.75rem; color:var(--text-muted); font-weight:800">${h}:00</div>`).join('')}</div>${Array(7).fill(0).map((_,i)=>{const ds=new Date(new Date(start).setDate(start.getDate()+i)).toISOString().slice(0,10); return `<div style="position:relative; border-right:1px solid var(--border-color);">${Array(24).fill(0).map(()=>`<div style="height:${rowH}px; border-bottom:1px solid var(--border-color)"></div>`).join('')}${p.filter(x=>getPlanType(x)==='hourly'&&x.start_time.startsWith(ds)).map(x=>{const s=new Date(x.start_time),e=new Date(x.end_time); const top=(s.getHours()*rowH)+(s.getMinutes()*(rowH/60))+4; let dur=(e-s)/60000; const dE=new Date(s); dE.setHours(23,59,59,999); if(e>dE) dur=(dE-s)/60000; const height=Math.max(dur*(rowH/60)-8, 40),done=x.status==='completed'; return `<div class="plan-event ${done?'done':''}" data-id="${x.id}" style="top:${top}px; height:${height}px; width:calc(100% - 10px); left:5px; background:${x.color};"><div style="font-size: 0.72rem; font-weight: 900; opacity: 0.85; margin-bottom: 4px; display:flex; align-items:center; justify-content:space-between;"><section><i class="far fa-clock"></i> ${s.getHours()}:${s.getMinutes().toString().padStart(2,'0')} - ${e.getHours()}:${e.getMinutes().toString().padStart(2,'0')}</section>${done?'<i class="fas fa-check-circle"></i>':''}</div><div style="font-size:0.92rem; font-weight:900; line-height:1.2; margin-bottom:4px;">${x.title}</div><div style="font-size:0.75rem; font-weight:500; opacity:0.8; line-height:1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${x.description || ''}</div></div>`;}).join('')}</div>`;}).join('')}</div>`;
     return `<div style="height:100%; display:flex; flex-direction:column; overflow:hidden;">${header}${alldayS}${grid}</div>`;
 };
@@ -295,7 +365,26 @@ const renderMonthView = (tasks, habits, plans) => {
     for(let d=1; d<=end.getDate(); d++) {
         const ds = new Date(currentDate.getFullYear(), currentDate.getMonth(), d).toISOString().slice(0,10), active = ds === new Date().toISOString().slice(0, 10);
         const dayP = plans.filter(p => ds >= p.start_time.slice(0,10) && ds <= p.end_time.slice(0,10));
-        body += `<div class="month-day-cell" data-date="${ds}"><span class="month-day-number ${active?'today':''}">${d}</span><div class="month-indicator-container">${dayP.slice(0,3).map(p=>{ const done=p.status==='completed'; return `<div class="month-event-badge ${done?'done':''}" data-id="${p.id}" style="background:${p.color};">${p.title}${done?' <i class="fas fa-check" style="font-size:0.6rem;"></i>':''}</div>`}).join('')}${dayP.length>3?`<div style="font-size:0.65rem; font-weight:800; color:var(--text-light); text-align:center;">+ ${dayP.length-3} kế hoạch</div>`:''}</div></div>`;
+        const dayT = tasks.filter(t => t.due_date && t.due_date.startsWith(ds));
+        const allDayItems = [
+            ...dayT.map(x => ({ ...x, displayType: 'task' })),
+            ...dayP.map(x => ({ ...x, displayType: 'plan' }))
+        ];
+        body += `<div class="month-day-cell" data-date="${ds}"><span class="month-day-number ${active?'today':''}">${d}</span><div class="month-indicator-container">
+            ${allDayItems.slice(0,3).map(item=>{ 
+                const done=item.status==='completed'; 
+                const icon = item.displayType === 'task' ? '<i class="fas fa-check-double" style="font-size:0.6rem;"></i> ' : '';
+                const color = item.displayType === 'task' ? '#6c5ce7' : item.color;
+                const bg = item.displayType === 'task' ? 'rgba(108,92,231,0.1)' : item.color;
+                const textColor = item.displayType === 'task' ? '#6c5ce7' : 'white';
+                const border = item.displayType === 'task' ? `1px solid ${color}44` : 'none';
+                
+                return `<div class="${item.displayType==='task'?'task-event':'month-event-badge'} ${done?'done':''}" data-id="${item.id}" style="background:${bg}; color:${textColor}; border:${border}; font-size: 0.72rem; font-weight: 800; padding: 4px 8px; border-radius: 6px; margin-bottom: 3px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; border-left: 3.5px solid ${item.displayType==='task'?color:'rgba(0,0,0,0.15)'}; width: 100%; display: flex; align-items: center; justify-content: space-between;">
+                    <section style="overflow:hidden; text-overflow:ellipsis;">${icon}${item.title}</section>
+                    ${done?' <i class="fas fa-check" style="font-size:0.6rem;"></i>':''}
+                </div>`
+            }).join('')}
+            ${allDayItems.length>3?`<div style="font-size:0.65rem; font-weight:800; color:var(--text-light); text-align:center;">+ ${allDayItems.length-3} mục khác</div>`:''}</div></div>`;
     }
     const rem = (startDay + end.getDate()) % 7 === 0 ? 0 : 7 - ((startDay + end.getDate()) % 7);
     for(let i=0; i<rem; i++) body += `<div style="border-right: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); background:rgba(0,0,0,0.012); height: 110px;"></div>`;

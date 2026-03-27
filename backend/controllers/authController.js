@@ -115,7 +115,7 @@ const authController = {
     getProfile: async (req, res) => {
         try {
             const [users] = await db.execute(
-                'SELECT id, username, email, profile_image, created_at FROM users WHERE id = ?',
+                'SELECT id, username, email, full_name, bio, profile_image, created_at FROM users WHERE id = ?',
                 [req.user.id]
             );
 
@@ -138,6 +138,71 @@ const authController = {
     logout: (req, res) => {
         res.clearCookie('token');
         res.json({ message: 'Đã đăng xuất.' });
+    },
+
+    // Update Profile
+    updateProfile: async (req, res) => {
+        try {
+            const { username, email, full_name, bio } = req.body;
+            
+            // Check if username/email already taken by another user
+            const [existing] = await db.execute(
+                'SELECT * FROM users WHERE (email = ? OR username = ?) AND id != ?',
+                [email, username, req.user.id]
+            );
+
+            if (existing.length > 0) {
+                return res.status(400).json({ message: 'Tên đăng nhập hoặc email đã được sử dụng!' });
+            }
+
+            await db.execute(
+                'UPDATE users SET username = ?, email = ?, full_name = ?, bio = ? WHERE id = ?',
+                [username, email, full_name || null, bio || null, req.user.id]
+            );
+
+            res.json({ success: true, message: 'Cập nhật thông tin thành công!' });
+        } catch (error) {
+            console.error('Update profile error:', error);
+            res.status(500).json({ message: 'Lỗi khi cập nhật thông tin.' });
+        }
+    },
+
+    // Change Password
+    changePassword: async (req, res) => {
+        try {
+            const { currentPassword, newPassword } = req.body;
+
+            const [users] = await db.execute('SELECT password FROM users WHERE id = ?', [req.user.id]);
+            const user = users[0];
+
+            const isMatch = await bcrypt.compare(currentPassword, user.password);
+            if (!isMatch) {
+                return res.status(400).json({ message: 'Mật khẩu hiện tại không chính xác!' });
+            }
+
+            const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+            await db.execute('UPDATE users SET password = ? WHERE id = ?', [hashedNewPassword, req.user.id]);
+
+            res.json({ success: true, message: 'Đổi mật khẩu thành công!' });
+        } catch (error) {
+            console.error('Change password error:', error);
+            res.status(500).json({ message: 'Lỗi khi đổi mật khẩu.' });
+        }
+    },
+
+    // Update Settings
+    updateSettings: async (req, res) => {
+        try {
+            const { theme, notifications_enabled, accent_color } = req.body;
+            await db.execute(
+                'INSERT INTO user_settings (user_id, theme, notifications_enabled, accent_color) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE theme = VALUES(theme), notifications_enabled = VALUES(notifications_enabled), accent_color = VALUES(accent_color)',
+                [req.user.id, theme || 'light', notifications_enabled !== undefined ? notifications_enabled : true, accent_color || '#FFA726']
+            );
+            res.json({ success: true, message: 'Cài đặt đã được lưu!' });
+        } catch (error) {
+            console.error('Update settings error:', error);
+            res.status(500).json({ message: 'Lỗi khi lưu cài đặt.' });
+        }
     }
 };
 

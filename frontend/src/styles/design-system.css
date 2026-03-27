@@ -50,21 +50,22 @@
 }
 
 [data-theme="dark"] {
-    --bg-color: #0F172A; /* Slate 900 */
-    --sidebar-bg: #1E293B; /* Slate 800 */
-    --card-bg: #1E293B;
-    --header-bg: #0F172A;
+    --bg-color: #0B0E14; /* Deep Night */
+    --sidebar-bg: #121721; /* Sidebar Slate */
+    --card-bg: #1A1F2B; /* Card Contrast */
+    --header-bg: rgba(11, 14, 20, 0.85); /* Blurred Header */
     
-    --text-main: #F8FAFC;
-    --text-muted: #94A3B8;
-    --text-light: #64748B;
+    --text-main: #FFFFFF;
+    --text-muted: #9BA3AF;
+    --text-light: #4B5563;
     
-    --border-color: #334155;
-    --input-bg: #1E293B;
+    --border-color: #2D3748;
+    --input-bg: #121721;
+    --primary-light: #1E1B16; /* Deep Honey Accent */
     
-    --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
-    --shadow-md: 0 4px 6px rgba(0,0,0,0.3);
-    --shadow-lg: 0 10px 15px rgba(0,0,0,0.4);
+    --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.6);
 }
 
 * {
@@ -78,7 +79,9 @@ body {
     background-color: var(--bg-color);
     color: var(--text-main);
     line-height: 1.5;
-    transition: background-color var(--transition-base), color var(--transition-base);
+    transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
+                color 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                border-color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 a {

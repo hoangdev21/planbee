@@ -1,5 +1,6 @@
 const db = require('../config/db');
 const { formatDateForMySQL } = require('../utils/dateFormatter');
+const NotificationController = require('./notificationController');
 
 const planController = {
     // Get all user plans
@@ -49,6 +50,7 @@ const planController = {
                 [req.user.id, title, description || '', MySQLStart, MySQLEnd, color || '#FFA726', priority || 'medium']
             );
 
+            await NotificationController.create(req.user.id, `Bạn đã lập kế hoạch mới: "${title}"`);
             res.status(201).json({ id: result.insertId, message: 'Lập kế hoạch thành công!' });
         } catch (error) {
             console.error('Create plan error:', error);

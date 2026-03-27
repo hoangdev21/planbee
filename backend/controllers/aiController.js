@@ -37,28 +37,27 @@ const aiController = {
             })).filter(msg => msg.role !== 'system');
 
             const systemPrompt = `
-Bạn là Bee - Trợ lý AI chuyên nghiệp và tận tâm của PlanBee. 🥰🐝
+Bạn là Bee - Trợ lý AI thông minh, nhiệt huyết và cực kỳ tâm lý của PlanBee. 🐝✨
 
-NHIỆM VỤ: Phân tích và gợi ý lịch trình thông minh (RAG).
+NHIỆM VỤ: Giúp người dùng quản lý thời gian hiệu quả, xây dựng kỷ luật và duy trì thói quen tích cực.
 
-QUY TẮC PHẢN HỒI (BẮT BUỘC):
-1. **Gọn gàng & Phân ý**: Không viết đoạn văn dài. Hãy dùng danh sách dấu chấm tròn hoặc số thứ tự.
-2. **Trực diện**: Trả lời thẳng vào vấn đề. 
-3. **Phân tích RAG**:
-   - Ưu tiên Task **High Priority** và deadline gần.
-   - Chỉ ra các khoảng trống trong "Kế hoạch" để gợi ý việc nên làm.
-   - Nhắc nhở Thói quen chưa hoàn thành.
-4. **Định dạng**:
-   - **BÔI ĐẬM** tên công việc và mốc thời gian.
-   - Sử dụng emoji để tăng tính trực quan (⏰, 🎯, 📚, ✨).
-5. **Cấu trúc gợi ý lý tưởng**:
-   - 📅 **Phân tích hiện tại**: (Ngắn gọn tình hình)
-   - 🚀 **Hành động ưu tiên**: (Việc cần làm ngay)
-   - 💡 **Gợi ý thêm**: (Tối ưu thời gian rảnh/Thói quen)
+PHONG CÁCH PHẢN HỒI (QUY TẮC CỨNG):
+1. **Dành cho Lời chào/Trò chuyện**: Nếu người dùng chỉ chào hỏi (Hi, Hello, Chào,...) hãy chào lại một cách nồng nhiệt, vui vẻ và thân thiện. KHÔNG liệt kê task, KHÔNG phân tích dữ liệu và KHÔNG hiển thị thẻ hành động []. Chỉ trả lời tự nhiên như một người bạn. 🥰
+2. **Dành cho Phân tích/Gợi ý (RAG)**: Chỉ thực hiện khi được hỏi cụ thể (Ví dụ: "Tôi nên làm gì?", "Gợi ý lịch trình", "Phân tích giúp tôi",...). Khi đó hãy dùng dữ liệu CONTEXT để tư vấn chuyên sâu.
+3. **Quy tắc Thẻ hành động kỹ thuật []**: 
+   - TUYỆT ĐỐI KHÔNG tự ý hiển thị thẻ [] nếu bạn chưa thực hiện thành công một tool call (Thêm/Xóa/Sửa).
+   - Nếu gọi tool thành công, chỉ hiển thị DUY NHẤT 01 thẻ ở cuối cùng của câu trả lời.
+   - Tuyệt đối không bao giờ hiển thị thẻ hành động trong một cuộc hội thoại chào hỏi thông thường.
 
-**HÀNH ĐỘNG KỸ THUẬT** (Luôn đặt ở cuối):
-- [view_plan:title=...&date=YYYY-MM-DD&time=HH:00] -> Dùng khi tạo/cập nhật thành công.
-- [delete_plan:id=...&title=...] -> Dùng khi xóa thành công.
+CẤU TRÚC PHẢN HỒI RAG (CHỈ KHI ĐƯỢC YÊU CẦU):
+- Phân tích: Task nào đang trễ? Task nào cần làm ngay? 📊
+- Chiến thuật: Gợi ý sắp xếp thời gian hợp lý dựa trên Context bên dưới. 🚀
+- Khích lệ: Nhắc nhở thói quen và duy trì chuỗi (streak). 🌿
+
+HÀNH ĐỘNG KỸ THUẬT:
+- [view_plan:title=...&date=YYYY-MM-DD&time=HH:00] -> Chỉ dùng khi tạo/cập nhật thành công plan.
+- [delete_plan:id=...&title=...&date=YYYY-MM-DD&time=HH:MM&view=day] -> Dùng khi xóa thành công một plan.
+- [view_habit:title=...] -> Chỉ dùng khi tạo thành công thói quen.
 
 DỮ LIỆU THỰC TẾ (CONTEXT):
 - Thời gian: ${currentTime} (${dayOfWeek})
@@ -69,7 +68,7 @@ ${plansStr || 'Trống'}
 - Habits:
 ${habitsStr || 'Trống'}
 
-LƯU Ý: Tuyệt đối bảo mật ID [id:...]. Thẻ hành động [] luôn đặt ở CUỐI CÙNG.
+LƯU Ý: Tuyệt đối bảo mật ID [id:...]. Thẻ hành động [] (nếu có) luôn xếp ở cuối cùng sau lời chào/xác nhận.
 `;
 
             const messages = [
@@ -114,6 +113,23 @@ LƯU Ý: Tuyệt đối bảo mật ID [id:...]. Thẻ hành động [] luôn đ
                 {
                     type: "function",
                     function: {
+                        name: "add_new_habit",
+                        description: "Add a habit.",
+                        parameters: {
+                            type: "object",
+                            properties: {
+                                title: { type: "string" },
+                                description: { type: "string" },
+                                frequency: { type: "string", enum: ["daily", "weekly"] },
+                                preferred_time: { type: "string", description: "HH:MM:SS format" }
+                            },
+                            required: ["title"]
+                        }
+                    }
+                },
+                {
+                    type: "function",
+                    function: {
                         name: "update_status",
                         description: "Update status of a task or plan.",
                         parameters: {
@@ -136,7 +152,7 @@ LƯU Ý: Tuyệt đối bảo mật ID [id:...]. Thẻ hành động [] luôn đ
                             type: "object",
                             properties: { 
                                 title: { type: "string" },
-                                type: { type: "string", enum: ["task", "plan"] }
+                                type: { type: "string", enum: ["task", "plan", "habit"] }
                             },
                             required: ["title"]
                         }
@@ -185,6 +201,12 @@ LƯU Ý: Tuyệt đối bảo mật ID [id:...]. Thẻ hành động [] luôn đ
                                 [userId, args.title, start, end, color]);
                             resTool = "Success";
                         }
+                    } else if (toolCall.function.name === "add_new_habit") {
+                        await db.execute(
+                            'INSERT INTO habits (user_id, title, description, frequency, preferred_time) VALUES (?, ?, ?, ?, ?)',
+                            [userId, args.title, args.description || '', args.frequency || 'daily', args.preferred_time || null]
+                        );
+                        resTool = "Success";
                     } else if (toolCall.function.name === "update_status") {
                         const title = (args.title || "").trim();
                         const [upT] = await db.execute('UPDATE tasks SET status = ? WHERE user_id = ? AND title = ?', [args.status, userId, title]);
@@ -195,7 +217,28 @@ LƯU Ý: Tuyệt đối bảo mật ID [id:...]. Thẻ hành động [] luôn đ
                             resTool = upP.affectedRows > 0 ? "Updated plan successfully" : "Not found.";
                         }
                     } else if (toolCall.function.name === "delete_item") {
-                        resTool = "Success";
+                        const title = (args.title || "").trim();
+                        let deletedItem = null;
+                        if (args.type === "task") {
+                            const [rows] = await db.execute('SELECT id, title, due_date FROM tasks WHERE user_id = ? AND title = ?', [userId, title]);
+                            if (rows[0]) {
+                                deletedItem = rows[0];
+                                await db.execute('DELETE FROM tasks WHERE id = ?', [rows[0].id]);
+                            }
+                        } else if (args.type === "plan") {
+                            const [rows] = await db.execute('SELECT id, title, start_time FROM plans WHERE user_id = ? AND title = ?', [userId, title]);
+                            if (rows[0]) {
+                                deletedItem = rows[0];
+                                await db.execute('DELETE FROM plans WHERE id = ?', [rows[0].id]);
+                            }
+                        } else if (args.type === "habit") {
+                            const [rows] = await db.execute('SELECT id, title FROM habits WHERE user_id = ? AND title = ?', [userId, title]);
+                            if (rows[0]) {
+                                deletedItem = rows[0];
+                                await db.execute('DELETE FROM habits WHERE id = ?', [rows[0].id]);
+                            }
+                        }
+                        resTool = deletedItem ? `Success: Item ${deletedItem.id} ("${deletedItem.title}") has been deleted.` : "Error: Item not found.";
                     }
                     messages.push({ tool_call_id: toolCall.id, role: "tool", name: toolCall.function.name, content: resTool });
                 }

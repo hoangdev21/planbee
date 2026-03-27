@@ -7,7 +7,6 @@ let chatHistory = JSON.parse(localStorage.getItem('bee_chat_history') || '[]').m
     ...msg,
     role: msg.role === 'bot' ? 'assistant' : msg.role
 }));
-let usedSuggestions = JSON.parse(localStorage.getItem('bee_used_suggestions') || '[]');
 localStorage.setItem('bee_chat_history', JSON.stringify(chatHistory));
 
 export const initChatWidget = () => {
@@ -44,12 +43,16 @@ const parseActionLinks = (text) => {
     let formatted = cleaned.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
     
     // 3. Process action tags
-    const regex = /\[(view_plan|delete_plan):(.*?)\]/g;
+    const regex = /\[(view_plan|delete_plan|view_habit):(.*?)\]/g;
     return formatted.replace(regex, (match, action, p2) => {
         const isDelete = action === 'delete_plan';
-        const label = isDelete ? 'Xác nhận xóa ngay 💥' : 'Xem lịch trình ngay ✨';
+        const isHabit = action === 'view_habit';
+        
+        let label = 'Xem lịch trình ngay ✨';
+        if (isDelete) label = 'Xác nhận xóa ngay 💥';
+        if (isHabit) label = 'Xem thói quen ngay 🌿';
+
         const btnClass = isDelete ? 'chat-action-link delete-action' : 'chat-action-link';
-        // Remove trailing <br> before the button if it exists to keep it tight
         return `<button class="${btnClass}" data-params="${p2}&isDelete=${isDelete}&tag=${action}">${label}</button>`;
     });
 };
@@ -72,19 +75,37 @@ const attachActionListeners = (container, widget) => {
                 widget.style.cssText = ""; 
                 renderMinimized(widget);
 
-                if (window.location.hash !== '#/planning') {
-                    window.location.hash = '#/planning';
-                    await new Promise(r => setTimeout(r, 100)); // Wait for router
+                if (params.tag === 'view_habit') {
+                    if (window.location.hash !== '#/habits') {
+                        window.location.hash = '#/habits';
+                        await new Promise(r => setTimeout(r, 100));
+                    }
+                    const { renderHabits } = await import('../pages/habits.js');
+                    await renderHabits(app);
+                    return;
+                }
+
+                const targetHash = `#/planning?${rawParams}`;
+                if (window.location.hash !== targetHash) {
+                    window.location.hash = targetHash;
+                    await new Promise(r => setTimeout(r, 600)); // Wait for router and initial render
                 }
                 
                 if (params.isDelete === 'true') {
-                    await renderPlanning(app, params); 
+                    // Re-render explicitly with params to ensure Ghost item logic triggers reliably
+                    await renderPlanning(app, { ...params, noScroll: true }); 
+                    
+                    // Small delay to ensure renderPlanningUI finished its work
                     setTimeout(() => {
-                        performDeleteEffect(params, () => renderPlanning(app, params));
-                    }, 400);
+                        performDeleteEffect(params, () => {
+                            // After explosion, clean up URL and refresh
+                            window.location.hash = '#/planning';
+                            renderPlanning(app, { noScroll: true });
+                        });
+                    }, 400); 
                 } else {
                     await renderPlanning(app, params);
-                    setTimeout(() => showBeeGuide(params), 700);
+                    setTimeout(() => showBeeGuide(params), 750);
                 }
             }
         };
@@ -95,57 +116,114 @@ const performDeleteEffect = async (params, onFinish) => {
     const planningPage = document.getElementById('page-content');
     if (!planningPage) return;
 
-    // We must find the REAL element which is still there since we haven't deleted yet!
-    let targetEl = Array.from(planningPage.querySelectorAll('.plan-event, .month-event-badge'))
-        .find(el => el.innerText.toLowerCase().includes(params.title.toLowerCase()) && el.offsetParent !== null);
+    // 1. Robust Lookup: ID -> Title -> or try to scroll to the slot based on time
+    let targetEl = null;
+    
+    // Attempt lookup by ID
+    if (params.id) {
+        targetEl = planningPage.querySelector(`[data-id="${params.id}"]`);
+    }
+    
+    // Fallback to Title
+    if (!targetEl && params.title) {
+        targetEl = Array.from(planningPage.querySelectorAll('.plan-event, .task-event, .month-event-badge'))
+                        .find(el => el.innerText.toLowerCase().includes(params.title.toLowerCase()) && el.offsetParent !== null);
+    }
     
     if (!targetEl) {
-        console.warn("Element not found for shatter effect.");
+        console.warn('PlanBee: Target element not found for deletion!', params);
         if (onFinish) onFinish();
         return;
     }
 
-    // Scroll smoothly to ensure we see the explosion
+    console.log('PlanBee: Starting deletion sequence for', targetEl);
+    // 2. Immediate scroll with clear focus
     targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    
+    // Add temporary highlight circle during scroll
+    const highlight = document.createElement('div');
+    highlight.style.cssText = `position:fixed; inset:0; z-index:999998; border:10px solid rgba(255, 50, 50, 0.4); pointer-events:none; opacity:0; transition: opacity 0.3s;`;
+    document.body.appendChild(highlight);
+    setTimeout(() => highlight.style.opacity = '1', 50);
         
     setTimeout(async () => {
-        const rect = targetEl.getBoundingClientRect();
-        const color = window.getComputedStyle(targetEl).backgroundColor || '#FF9800';
+        highlight.remove();
         
-        targetEl.style.animation = 'vibrate 0.4s linear infinite';
+        // 1. PHASE 1: CHARGING & VIBRATION (Build tension)
+        targetEl.style.zIndex = '2000000';
+        targetEl.style.position = 'relative'; 
+        targetEl.style.animation = 'superVibrate 0.8s cubic-bezier(.36,.07,.19,.97) both';
+        targetEl.style.boxShadow = '0 0 80px rgba(255, 50, 50, 0.9), 0 0 120px rgba(255, 50, 50, 0.4)';
+        targetEl.style.border = '4px solid white';
+        targetEl.style.transformOrigin = 'center';
         
         setTimeout(async () => {
+            const rect = targetEl.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const baseColor = '#FF5252';
+
+            // 2. PHASE 2: THE BIG BANG (Hide element and show flash/shockwave)
             targetEl.style.opacity = '0';
             targetEl.style.pointerEvents = 'none';
+
+            // Shockwave Effect
+            const shockwave = document.createElement('div');
+            shockwave.className = 'shatter-shockwave';
+            shockwave.style.cssText = `position:fixed; left:${centerX}px; top:${centerY}px;`;
+            document.body.appendChild(shockwave);
+            setTimeout(() => shockwave.remove(), 800);
+
+            // Center Flash
+            const flash = document.createElement('div');
+            flash.className = 'shatter-flash';
+            flash.style.cssText = `position:fixed; left:${centerX}px; top:${centerY}px;`;
+            document.body.appendChild(flash);
+            setTimeout(() => flash.remove(), 400);
             
-            // Particles
-            const count = 30;
+            // 3. PHASE 3: HONEYCOMB PARTICLES (Beautiful shatter)
+            const count = 80; 
             for (let i = 0; i < count; i++) {
                 const p = document.createElement('div');
-                p.style.cssText = `position:fixed; left:${rect.left + rect.width/2}px; top:${rect.top + rect.height/2}px; width:${Math.random()*10+5}px; height:${Math.random()*10+5}px; background:${color}; z-index:25000; border-radius:2px; pointer-events:none; transition: all 0.8s cubic-bezier(0.1, 0.5, 0.1, 1);`;
-                document.body.appendChild(p);
+                const size = Math.random() * 20 + 10;
                 const angle = Math.random() * Math.PI * 2;
-                const velocity = Math.random() * 300 + 100;
-                setTimeout(() => {
-                    p.style.transform = `translate(${Math.cos(angle)*velocity}px, ${Math.sin(angle)*velocity}px) rotate(${Math.random()*720}deg) scale(0)`;
+                const velocity = Math.random() * 800 + 400; // Fast spread
+                const duration = Math.random() * 0.8 + 0.6;
+                const delay = Math.random() * 0.05;
+
+                p.className = 'honeycomb-particle';
+                p.style.cssText = `
+                    position:fixed; 
+                    left:${centerX}px; 
+                    top:${centerY}px; 
+                    width:${size}px; 
+                    height:${size}px; 
+                    background: ${i % 3 === 0 ? '#FFF' : baseColor};
+                    z-index:999999; 
+                    opacity: 1;
+                    transition: all ${duration}s cubic-bezier(0.1, 0.8, 0.2, 1) ${delay}s;
+                    box-shadow: 0 0 15px ${baseColor};
+                `;
+                document.body.appendChild(p);
+                
+                // Trigger animation
+                requestAnimationFrame(() => {
+                    const tx = Math.cos(angle) * velocity;
+                    const ty = Math.sin(angle) * velocity;
+                    const rot = Math.random() * 1080;
+                    p.style.transform = `translate(${tx}px, ${ty}px) rotate(${rot}deg) scale(0)`;
                     p.style.opacity = '0';
-                }, 20);
-                setTimeout(() => p.remove(), 1000);
+                });
+
+                setTimeout(() => p.remove(), (duration + delay) * 1000 + 100);
             }
             
-            // PERFORM REAL DELETE IN DB AFTER EFFECT
-            try {
-                const isPlan = params.tag.includes('delete_plan');
-                const endpoint = isPlan ? `/plans/delete/${params.id}` : `/tasks/delete/${params.id}`;
-                await api.delete(endpoint);
-            } catch (err) { console.error("Hỏng xóa DB:", err); }
-
             setTimeout(() => {
                 targetEl.remove();
-                if (onFinish) onFinish(); // Final refresh
-            }, 500);
-        }, 600);
-    }, 600);
+                if (onFinish) onFinish();
+            }, 600);
+        }, 800); // Wait for charging animation
+    }, 700); 
 };
 
 const renderMinimized = (container) => {
@@ -194,10 +272,6 @@ const renderExpanded = (container) => {
                     </div>
                 `).join('')}
             </div>
-            
-            <div class="chat-suggestions" id="chat-suggestions-box">
-                <!-- Suggestions will be rendered here -->
-            </div>
 
             <div class="chat-input-area">
                 <input type="text" id="chat-input" placeholder="Hỏi Bee bất cứ điều gì..." autocomplete="off">
@@ -215,34 +289,7 @@ const renderExpanded = (container) => {
     const closeBtn = document.getElementById('chat-close');
     const clearBtn = document.getElementById('chat-clear');
     const fsBtn = document.getElementById('chat-fullscreen');
-    const suggestionsBox = document.getElementById('chat-suggestions-box');
 
-    const updateSuggestions = () => {
-        const suggestions = [
-            { query: "Hôm nay tôi nên làm gì?", label: "Hôm nay làm gì? 🎯" },
-            { query: "Tối nay tôi rảnh, nên làm gì?", label: "Gợi ý việc rảnh ✨" },
-            { query: "Tôi nên ưu tiên task nào trước?", label: "Ưu tiên task 📊" },
-            { query: "Sắp xếp lại lịch trình giúp tôi", label: "Sắp xếp lịch 🔄" }
-        ].filter(s => !usedSuggestions.includes(s.query));
-        
-        suggestionsBox.innerHTML = suggestions.map(s => 
-            `<button class="chat-suggestion-chip" data-query="${s.query}">${s.label}</button>`
-        ).join('');
-
-        suggestionsBox.querySelectorAll('.chat-suggestion-chip').forEach(chip => {
-            chip.onclick = (e) => {
-                e.stopPropagation();
-                const query = chip.dataset.query;
-                usedSuggestions.push(query);
-                localStorage.setItem('bee_used_suggestions', JSON.stringify(usedSuggestions));
-                chatInput.value = query;
-                sendMessage();
-                updateSuggestions(); 
-            };
-        });
-    };
-
-    updateSuggestions();
     const sendMessage = async () => {
         const text = chatInput.value.trim();
         if (!text) return;
@@ -267,8 +314,8 @@ const renderExpanded = (container) => {
             msgBox.scrollTop = msgBox.scrollHeight;
             attachActionListeners(msgBox, container);
         } catch (err) {
-            const tMsg = document.getElementById(typingId);
-            if (tMsg) tMsg.remove();
+            const typingMsg = document.getElementById(typingId);
+            if (typingMsg) typingMsg.remove();
             msgBox.innerHTML += `<div class="msg-group msg-bot error"><img src="/bot-bee.png" class="chat-avatar"><div class="msg-content">Bee lỗi rồi 🥰</div></div>`;
         }
     };
@@ -289,9 +336,7 @@ const renderExpanded = (container) => {
         e.stopPropagation();
         if (confirm('Xóa sạch lịch sử trò chuyện?')) {
             chatHistory = [];
-            usedSuggestions = [];
             localStorage.removeItem('bee_chat_history');
-            localStorage.removeItem('bee_used_suggestions');
             renderExpanded(container);
         }
     };
@@ -331,28 +376,45 @@ const showBeeGuide = (params = {}) => {
             zIndex: el.style.zIndex,
             animation: el.style.animation,
             boxShadow: el.style.boxShadow,
-            border: el.style.border
-            // Removed position modification to prevent layout collapse
+            border: el.style.border,
+            overflow: el.style.overflow,
+            transition: el.style.transition
         };
         
+        // Ensure element is positioned for z-index
+        const computedStyle = window.getComputedStyle(el);
+        if (computedStyle.position === 'static') {
+            el.style.position = 'relative';
+            originalStyles.position = 'static';
+        }
+
         // Use 'true' to scroll and 'nearest' to avoid excessive blank space at bottom
-        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
         
+        // IMPORTANT: Remove overflow hidden to allow the glow to show!
+        el.style.overflow = 'visible';
         el.style.zIndex = '10003';
         el.style.border = '4px solid white';
         el.style.animation = 'eventFocus 1.0s ease-in-out infinite';
-        el.style.boxShadow = '0 0 40px rgba(255,255,255,0.9)';
+        el.style.boxShadow = '0 0 60px rgba(255,255,255,1), 0 0 100px rgba(255,152,0,0.4)';
+        el.style.transition = 'all 0.3s ease';
     };
 
     const renderBee = (el) => {
-        // We MUST wait for the scroll to finish to get a stable Rect
+        // Double check positions after scroll might have finished
         const rect = el.getBoundingClientRect();
+        
+        // If rect is totally off or hidden, don't show bee
+        if (rect.top === 0 && rect.left === 0) return;
+
         let isFlipped = rect.left > window.innerWidth / 2;
         let top = `${rect.top + (rect.height / 2) - 80}px`;
         let left = isFlipped ? `${rect.left - 135}px` : `${rect.right + 20}px`;
 
-        if (parseInt(left) < 10) left = '10px';
-        if (parseInt(left) + 120 > window.innerWidth) left = `${window.innerWidth - 130}px`;
+        // Safety bounds
+        const leftVal = parseInt(left);
+        if (leftVal < 20) left = '20px';
+        if (leftVal + 140 > window.innerWidth) left = `${window.innerWidth - 150}px`;
 
         const guide = document.createElement('div');
         guide.id = 'bee-guide-overlay';
@@ -376,6 +438,7 @@ const showBeeGuide = (params = {}) => {
 
         const dismiss = () => {
             Object.assign(el.style, originalStyles);
+            if (originalStyles.position === 'static') el.style.position = 'static';
             guide.classList.add('fade-out');
             setTimeout(() => guide.remove(), 400);
             document.removeEventListener('click', dismiss);
@@ -387,16 +450,16 @@ const showBeeGuide = (params = {}) => {
     let attempts = 0;
     let found = false;
     const checkAndShow = () => {
-        if (found) return; // Only highlight once
+        if (found) return; 
         const el = findTarget();
         if (el) {
             found = true;
             highlightTarget(el);
-            // Delay renderBee slightly MORE to wait for smooth scroll to finish
-            setTimeout(() => renderBee(el), 600);
-        } else if (attempts < 10) {
+            // Wait LONGER for smooth scroll to finish (800ms) before rendering Bee
+            setTimeout(() => renderBee(el), 800);
+        } else if (attempts < 15) {
             attempts++;
-            setTimeout(checkAndShow, 100);
+            setTimeout(checkAndShow, 150);
         }
     };
 
@@ -404,18 +467,20 @@ const showBeeGuide = (params = {}) => {
 };
 
 const addStyles = () => {
-    if (document.getElementById('bee-chat-styles')) return;
+    const existingStyle = document.getElementById('bee-chat-styles');
+    if (existingStyle) existingStyle.remove(); // Force update on re-init
+    
     const style = document.createElement('style');
     style.id = 'bee-chat-styles';
     style.innerHTML = `
-        #bee-chat-widget { position: fixed; bottom: 30px; right: 30px; z-index: 9999; font-family: 'Inter', sans-serif; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        .chat-widget-closed { width: 70px; height: 70px; cursor: pointer; }
-        .chat-bubble-trigger { width: 100%; height: 100%; background: white; border-radius: 50%; box-shadow: 0 10px 30px rgba(255,167,38,0.4); display: flex; align-items: center; justify-content: center; position: relative; border: 3px solid var(--primary-color); }
-        .bee-bubble-icon { width: 45px; height: 45px; transition: 0.3s; }
-        .chat-bubble-trigger:hover .bee-bubble-icon { transform: scale(1.1) rotate(10deg); }
-        .bubble-notif { position: absolute; transform: translate(25px, -25px); background: #ef4444; color: white; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 800; border: 2px solid white; }
+        #bee-chat-widget { position: fixed; bottom: 40px; right: 40px; z-index: 10005; font-family: 'Inter', sans-serif; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .chat-widget-closed { width: 80px; height: 80px; cursor: pointer; }
+        .chat-bubble-trigger { width: 100%; height: 100%; background: linear-gradient(135deg, #FFB74D, #FFA726); border-radius: 24px; box-shadow: 0 12px 24px rgba(255,167,38,0.3); display: flex; align-items: center; justify-content: center; position: relative; border: 3px solid white; transition: all 0.3s ease; }
+        .bee-bubble-icon { width: 50px; height: 50px; transition: 0.3s; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1)); }
+        .chat-bubble-trigger:hover { transform: translateY(-5px) scale(1.05); box-shadow: 0 18px 36px rgba(255,167,38,0.4); }
+        .bubble-notif { position: absolute; top: -5px; right: -5px; background: #ef4444; color: white; min-width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 900; border: 2.5px solid white; box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
 
-        .chat-widget-expanded { width: 400px; height: 600px; background: var(--card-bg); border-radius: 24px; box-shadow: var(--shadow-lg); overflow: hidden; display: flex; border: 1px solid var(--border-color); }
+        .chat-widget-expanded { width: 450px; height: 680px; background: var(--card-bg); border-radius: 24px; box-shadow: var(--shadow-lg); overflow: hidden; display: flex; border: 1px solid var(--border-color); }
         .chat-widget-expanded.fullscreen { width: 100vw; height: 100vh; position: fixed; top: 0; left: 0; bottom: 0; right: 0; border-radius: 0; z-index: 10000; }
         
         .chat-container-inner { width: 100%; height: 100%; display: flex; flex-direction: column; }
@@ -429,30 +494,25 @@ const addStyles = () => {
         .header-actions button { background: rgba(255,255,255,0.2); border: none; color: white; width: 32px; height: 32px; border-radius: 8px; cursor: pointer; transition: 0.2s; }
         .header-actions button:hover { background: rgba(255,255,255,0.4); }
 
-        .chat-messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 20px; background: #fdfdfe; scroll-behavior: smooth; }
+        .chat-messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 20px; background: var(--bg-color); scroll-behavior: smooth; }
         .msg-group { display: flex; gap: 10px; max-width: 85%; align-items: flex-end; }
         .msg-bot { align-self: flex-start; }
         .msg-user { align-self: flex-end; flex-direction: row-reverse; }
         
-        .chat-avatar { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; background: white; border: 1px solid var(--border-color); flex-shrink: 0; }
+        .chat-avatar { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; background: var(--card-bg); border: 1px solid var(--border-color); flex-shrink: 0; }
         .msg-content { padding: 12px 16px; border-radius: 18px; font-size: 0.95rem; line-height: 1.5; box-shadow: 0 4px 12px rgba(0,0,0,0.03); position: relative; }
         
-        .msg-bot .msg-content { background: white; color: var(--text-main); border-bottom-left-radius: 4px; border: 1px solid var(--border-color); }
+        .msg-bot .msg-content { background: var(--card-bg); color: var(--text-main); border-bottom-left-radius: 4px; border: 1px solid var(--border-color); }
         .msg-user .msg-content { background: var(--primary-color); color: white; border-bottom-right-radius: 4px; }
         
-        .chat-action-link { display: block; margin-top: 10px; width: 100%; border: none; background: rgba(255,167,38,0.1); color: var(--primary-color); padding: 10px; border-radius: 12px; font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: 0.2s; text-align: center; }
+        .chat-action-link { display: block; margin-top: 10px; width: 100%; border: none; background: var(--primary-light); color: var(--primary-color); padding: 10px; border-radius: 12px; font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: 0.2s; text-align: center; }
         .chat-action-link:hover { background: var(--primary-color); color: white; transform: translateY(-2px); }
 
-        .chat-input-area { padding: 20px; background: white; border-top: 1px solid var(--border-color); display: flex; gap: 12px; }
-        .chat-input-area input { flex: 1; border: 2px solid var(--border-color); border-radius: 12px; padding: 12px 16px; outline: none; transition: 0.2s; }
+        .chat-input-area { padding: 20px; background: var(--card-bg); border-top: 1px solid var(--border-color); display: flex; gap: 12px; }
+        .chat-input-area input { flex: 1; border: 2px solid var(--border-color); border-radius: 12px; padding: 12px 16px; outline: none; transition: 0.2s; background: var(--bg-color); color: var(--text-main); }
         .chat-input-area input:focus { border-color: var(--primary-color); }
         #chat-send { width: 48px; background: var(--primary-color); color: white; border: none; border-radius: 12px; cursor: pointer; transition: 0.2s; font-size: 1.1rem; }
         #chat-send:hover { transform: scale(1.05); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-
-        .chat-suggestions { padding: 8px 15px; display: flex; gap: 8px; overflow-x: auto; background: white; white-space: nowrap; scrollbar-width: none; }
-        .chat-suggestions::-webkit-scrollbar { display: none; }
-        .chat-suggestion-chip { background: #f0f2f5; border: 1px solid #e1e4e8; border-radius: 12px; padding: 6px 14px; font-size: 0.8rem; color: #4b5563; font-weight: 500; cursor: pointer; transition: all 0.2s; white-space: nowrap; flex-shrink: 0; }
-        .chat-suggestion-chip:hover { background: #fee2e2; border-color: var(--primary-color); color: var(--primary-color); transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
 
         .typing-dots span { animation: blink 1s infinite; margin: 0 1px; }
         @keyframes blink { 0% { opacity: 0.2; } 50% { opacity: 1; } 100% { opacity: 0.2; } }
@@ -478,7 +538,48 @@ const addStyles = () => {
         @keyframes beeFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
         @keyframes fadeInOverlay { 100% { opacity: 1; } }
         @keyframes eventFocus { 0%, 100% { transform: scale(1); filter: brightness(1.1); } 50% { transform: scale(1.03); filter: brightness(1.2); } }
-        @keyframes vibrate { 0% { transform: translate(1px, 1px) rotate(0deg); } 10% { transform: translate(-1px, -2px) rotate(-1deg); } 20% { transform: translate(-3px, 0px) rotate(1deg); } 30% { transform: translate(3px, 2px) rotate(0deg); } 40% { transform: translate(1px, -1px) rotate(1deg); } 50% { transform: translate(-1px, 2px) rotate(-1deg); } 60% { transform: translate(-3px, 1px) rotate(0deg); } 70% { transform: translate(3px, 1px) rotate(-1deg); } 80% { transform: translate(-1px, -1px) rotate(1deg); } 90% { transform: translate(1px, 2px) rotate(0deg); } 100% { transform: translate(1px, -2px) rotate(-1deg); } }
+        @keyframes flashEffect { 0% { opacity: 0; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.1); } 100% { opacity: 0; transform: scale(1.2); } }
+        
+        @keyframes superVibrate {
+            0% { transform: translate(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translate(-4px, 1px) rotate(-1deg) scale(1.02); }
+            20%, 40%, 60%, 80% { transform: translate(4px, -1px) rotate(1deg) scale(1.04); }
+            100% { transform: translate(0) scale(1.1); }
+        }
+
+        .shatter-shockwave {
+            width: 10px; height: 10px;
+            border: 4px solid white;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 1000000;
+            transform: translate(-50%, -50%);
+            animation: shockwaveGrow 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+        }
+        @keyframes shockwaveGrow {
+            0% { width: 0; height: 0; opacity: 1; border-width: 20px; }
+            100% { width: 800px; height: 800px; opacity: 0; border-width: 0px; }
+        }
+
+        .shatter-flash {
+            width: 100px; height: 100px;
+            background: white;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 1000001;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 100px 50px white;
+            animation: flashBurst 0.4s ease-out forwards;
+        }
+        @keyframes flashBurst {
+            0% { transform: translate(-50%, -50%) scale(0.1); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(4); opacity: 0; }
+        }
+
+        .honeycomb-particle {
+            clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+            pointer-events: none;
+        }
         
         .delete-action { background: #f44336 !important; border-color: #d32f2f !important; color: white !important; }
         .delete-action:hover { background: #d32f2f !important; color: white !important; box-shadow: 0 4px 12px rgba(211,47,47,0.3) !important; }

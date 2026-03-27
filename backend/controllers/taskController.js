@@ -1,5 +1,6 @@
 const db = require('../config/db');
 const { formatDateForMySQL } = require('../utils/dateFormatter');
+const NotificationController = require('./notificationController');
 
 const taskController = {
     // Get all user tasks
@@ -32,6 +33,7 @@ const taskController = {
                 [req.user.id, title, description || '', priority || 'medium', MySQLDueDate]
             );
 
+            await NotificationController.create(req.user.id, `Bạn đã tạo nhiệm vụ mới: "${title}"`);
             res.status(201).json({ id: result.insertId, title, message: 'Thêm nhiệm vụ thành công!' });
         } catch (error) {
             console.error('Create task error:', error);
@@ -56,6 +58,9 @@ const taskController = {
                 return res.status(404).json({ message: 'Không tìm thấy nhiệm vụ hoặc không có quyền sửa.' });
             }
 
+            if (status === 'completed') {
+                await NotificationController.create(req.user.id, `Bạn đã hoàn thành nhiệm vụ: "${title}"`);
+            }
             res.json({ message: 'Cập nhật thành công!' });
         } catch (error) {
             console.error('Update task error:', error);
