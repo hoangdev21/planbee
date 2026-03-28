@@ -1,4 +1,5 @@
 import api from '../utils/api.js';
+import { formatDateToYYYYMMDD } from '../utils/dateFormatter.js';
 
 export const renderDashboard = async (container) => {
     container.innerHTML = `<div style="padding: 40px; text-align: center;">Đang tổng hợp thông tin...</div>`;
@@ -92,7 +93,7 @@ export const renderDashboard = async (container) => {
                          
                          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 24px;">
                              ${habits.length > 0 ? habits.slice(0, 6).map(habit => {
-                                 const isDone = habit.last_completed && habit.last_completed.startsWith(new Date().toISOString().slice(0, 10));
+                                 const isDone = habit.last_completed && habit.last_completed.startsWith(formatDateToYYYYMMDD(new Date()));
                                  return `
                                      <div style="display: flex; align-items: center; gap: 20px; padding: 20px; border-radius: 20px; background: ${isDone ? 'rgba(0, 184, 148, 0.08)' : 'var(--bg-color)'}; border: 1.5px solid var(--border-color); box-shadow: var(--shadow-sm); transition: transform 0.2s;">
                                          <div style="width: 54px; height: 54px; display: flex; align-items: center; justify-content: center; transition: all 0.3s;">

@@ -47,6 +47,7 @@ CREATE TABLE `plans` (
   `color` varchar(20) DEFAULT '#FFA726',
   `priority` enum('low','medium','high') DEFAULT 'medium',
   `status` varchar(20) DEFAULT 'pending',
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `user_id` (`user_id`),
   CONSTRAINT `plans_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE

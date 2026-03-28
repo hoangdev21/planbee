@@ -1,4 +1,5 @@
 import api from '../utils/api.js';
+import { formatDateToYYYYMMDD, formatDateTimeToLocal } from '../utils/dateFormatter.js';
 
 let currentDate = new Date();
 let currentView = 'day'; // 'day', 'week', 'month'
@@ -295,8 +296,8 @@ const renderCurrentView = (tasks, habits, plans) => {
 };
 
 const renderDayView = (t, h, p) => {
-    const ds = currentDate.toISOString().slice(0, 10);
-    const dayPlans = p.filter(x => ds >= x.start_time.slice(0,10) && ds <= x.end_time.slice(0,10));
+    const ds = formatDateToYYYYMMDD(currentDate);
+    const dayPlans = p.filter(x => ds >= formatDateToYYYYMMDD(x.start_time) && ds <= formatDateToYYYYMMDD(x.end_time));
     const dayTasks = t.filter(x => (x.due_date && x.due_date.startsWith(ds)) || (x.status !== 'completed' && x.due_date && new Date(x.due_date) < new Date()));
     const allday = dayPlans.filter(x => getPlanType(x) === 'all-day'), hourly = dayPlans.filter(x => getPlanType(x) === 'hourly');
     
@@ -342,17 +343,17 @@ const renderDayView = (t, h, p) => {
 
 const renderWeekView = (t, h, p) => {
     const start = getStartOfWeek(currentDate), rowH = 60, weeklyAllDay = p.filter(x => getPlanType(x) === 'all-day');
-    let header = `<div style="display:grid; grid-template-columns: 80px repeat(7, 1fr); border-bottom:1.5px solid var(--border-color); position:sticky; top:0; z-index:100; background:var(--card-bg);"><div style="border-right:1px solid var(--border-color)"></div>${['T2','T3','T4','T5','T6','T7','CN'].map((l,i)=>{const d=new Date(start); d.setDate(start.getDate()+i); const active=d.toISOString().slice(0,10)===new Date().toISOString().slice(0,10); return `<div style="padding:10px; text-align:center; border-right:1px solid var(--border-color); ${active?'background:var(--primary-light); color:var(--primary-color);':''}"><small style="opacity:0.6; font-weight:800">${l}</small><div style="font-weight:900; font-size:1.1rem">${d.getDate()}</div></div>`;}).join('')}</div>`;
+    let header = `<div style="display:grid; grid-template-columns: 80px repeat(7, 1fr); border-bottom:1.5px solid var(--border-color); position:sticky; top:0; z-index:100; background:var(--card-bg);"><div style="border-right:1px solid var(--border-color)"></div>${['T2','T3','T4','T5','T6','T7','CN'].map((l,i)=>{const d=new Date(start); d.setDate(start.getDate()+i); const active=formatDateToYYYYMMDD(d)===formatDateToYYYYMMDD(new Date()); return `<div style="padding:10px; text-align:center; border-right:1px solid var(--border-color); ${active?'background:var(--primary-light); color:var(--primary-color);':''}"><small style="opacity:0.6; font-weight:800">${l}</small><div style="font-weight:900; font-size:1.1rem">${d.getDate()}</div></div>`;}).join('')}</div>`;
     let alldayS = `<div style="display:grid; grid-template-columns: 80px repeat(7, 1fr); border-bottom:2px solid var(--border-color); background:var(--sidebar-bg); min-height:48px; padding:8px 0;"><div style="border-right:1px solid var(--border-color); display:flex; align-items:center; justify-content:center;"><i class="fas fa-layer-group" style="opacity:0.3; font-size:0.9rem;"></i></div>${Array(7).fill(0).map((_,i)=>{
-        const d = new Date(start); d.setDate(start.getDate()+i); const ds = d.toISOString().slice(0,10); 
-        const dayA = weeklyAllDay.filter(x=>ds>=x.start_time.slice(0,10)&&ds<=x.end_time.slice(0,10));
-        const dayT = t.filter(x => x.due_date && x.due_date.startsWith(ds));
+        const d = new Date(start); d.setDate(start.getDate()+i); const ds = formatDateToYYYYMMDD(d); 
+        const dayA = weeklyAllDay.filter(x=>ds>=formatDateToYYYYMMDD(x.start_time)&&ds<=formatDateToYYYYMMDD(x.end_time));
+        const dayT = t.filter(x => x.due_date && formatDateToYYYYMMDD(x.due_date) === ds);
         return `<div style="border-right:1px solid var(--border-color); padding:0 6px; display:flex; flex-direction:column; gap:4px;">
             ${dayT.map(x => `<div class="task-pill task-event ${x.status==='completed'?'done':''}" data-id="${x.id}" style="width:100%; font-size:0.6rem; padding:2px 6px; border-radius:4px; background:rgba(108,92,231,0.1); color:#6c5ce7; border-left:2.5px solid #6c5ce7; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${x.title}</div>`).join('')}
-            ${dayA.map(x=>{const s=x.start_time.slice(0,10)===ds, e=x.end_time.slice(0,10)===ds; return `<div class="allday-pill" data-id="${x.id}" style="background:${x.color}; width:100%; font-size:0.65rem; border-radius:${s?'20px 0 0 20px':e?'0 20px 20px 0':'0'}; border-left:${s?'3px solid rgba(0,0,0,0.15)':'none'}; box-shadow:none;">${s?x.title:'&nbsp;'}</div>`;}).join('')}
+            ${dayA.map(x=>{const s=formatDateToYYYYMMDD(x.start_time)===ds, e=formatDateToYYYYMMDD(x.end_time)===ds; return `<div class="allday-pill" data-id="${x.id}" style="background:${x.color}; width:100%; font-size:0.65rem; border-radius:${s?'20px 0 0 20px':e?'0 20px 20px 0':'0'}; border-left:${s?'3px solid rgba(0,0,0,0.15)':'none'}; box-shadow:none;">${s?x.title:'&nbsp;'}</div>`;}).join('')}
         </div>`;
     }).join('')}</div>`;
-    let grid = `<div class="calendar-grid-scroll" style="display:grid; grid-template-columns: 80px repeat(7, 1fr); overflow-y:auto; flex:1; position:relative; max-height:${24 * rowH}px;"><div>${Array(24).fill(0).map((_,h)=>`<div style="height:${rowH}px; border-bottom:1px solid var(--border-color); text-align:right; padding:12px; font-size:0.75rem; color:var(--text-muted); font-weight:800">${h}:00</div>`).join('')}</div>${Array(7).fill(0).map((_,i)=>{const ds=new Date(new Date(start).setDate(start.getDate()+i)).toISOString().slice(0,10); return `<div style="position:relative; border-right:1px solid var(--border-color);">${Array(24).fill(0).map(()=>`<div style="height:${rowH}px; border-bottom:1px solid var(--border-color)"></div>`).join('')}${p.filter(x=>getPlanType(x)==='hourly'&&x.start_time.startsWith(ds)).map(x=>{const s=new Date(x.start_time),e=new Date(x.end_time); const top=(s.getHours()*rowH)+(s.getMinutes()*(rowH/60))+4; let dur=(e-s)/60000; const dE=new Date(s); dE.setHours(23,59,59,999); if(e>dE) dur=(dE-s)/60000; const height=Math.max(dur*(rowH/60)-8, 40),done=x.status==='completed'; return `<div class="plan-event ${done?'done':''}" data-id="${x.id}" style="top:${top}px; height:${height}px; width:calc(100% - 10px); left:5px; background:${x.color};"><div style="font-size: 0.72rem; font-weight: 900; opacity: 0.85; margin-bottom: 4px; display:flex; align-items:center; justify-content:space-between;"><section><i class="far fa-clock"></i> ${s.getHours()}:${s.getMinutes().toString().padStart(2,'0')} - ${e.getHours()}:${e.getMinutes().toString().padStart(2,'0')}</section>${done?'<img src="/complete.png" style="width:16px; height:16px; object-fit:contain;">':''}</div><div style="font-size:0.92rem; font-weight:900; line-height:1.2; margin-bottom:4px;">${x.title}</div><div style="font-size:0.75rem; font-weight:500; opacity:0.8; line-height:1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${x.description || ''}</div></div>`;}).join('')}</div>`;}).join('')}</div>`;
+    let grid = `<div class="calendar-grid-scroll" style="display:grid; grid-template-columns: 80px repeat(7, 1fr); overflow-y:auto; flex:1; position:relative; max-height:${24 * rowH}px;"><div>${Array(24).fill(0).map((_,h)=>`<div style="height:${rowH}px; border-bottom:1px solid var(--border-color); text-align:right; padding:12px; font-size:0.75rem; color:var(--text-muted); font-weight:800">${h}:00</div>`).join('')}</div>${Array(7).fill(0).map((_,i)=>{const ds=formatDateToYYYYMMDD(new Date(new Date(start).setDate(start.getDate()+i))); return `<div style="position:relative; border-right:1px solid var(--border-color);">${Array(24).fill(0).map(()=>`<div style="height:${rowH}px; border-bottom:1px solid var(--border-color)"></div>`).join('')}${p.filter(x=>getPlanType(x)==='hourly'&&formatDateToYYYYMMDD(x.start_time) === ds).map(x=>{const s=new Date(x.start_time),e=new Date(x.end_time); const top=(s.getHours()*rowH)+(s.getMinutes()*(rowH/60))+4; let dur=(e-s)/60000; const dE=new Date(s); dE.setHours(23,59,59,999); if(e>dE) dur=(dE-s)/60000; const height=Math.max(dur*(rowH/60)-8, 40),done=x.status==='completed'; return `<div class="plan-event ${done?'done':''}" data-id="${x.id}" style="top:${top}px; height:${height}px; width:calc(100% - 10px); left:5px; background:${x.color};"><div style="font-size: 0.72rem; font-weight: 900; opacity: 0.85; margin-bottom: 4px; display:flex; align-items:center; justify-content:space-between;"><section><i class="far fa-clock"></i> ${s.getHours()}:${s.getMinutes().toString().padStart(2,'0')} - ${e.getHours()}:${e.getMinutes().toString().padStart(2,'0')}</section>${done?'<img src="/complete.png" style="width:16px; height:16px; object-fit:contain;">':''}</div><div style="font-size:0.92rem; font-weight:900; line-height:1.2; margin-bottom:4px;">${x.title}</div><div style="font-size:0.75rem; font-weight:500; opacity:0.8; line-height:1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${x.description || ''}</div></div>`;}).join('')}</div>`;}).join('')}</div>`;
     return `<div style="height:100%; display:flex; flex-direction:column; overflow:hidden;">${header}${alldayS}${grid}</div>`;
 };
 
@@ -363,9 +364,10 @@ const renderMonthView = (tasks, habits, plans) => {
     let body = `<div style="display:grid; grid-template-columns:repeat(7, 1fr); height:100%; border-left:1px solid var(--border-color);">`;
     for(let i=0; i<startDay; i++) body += `<div style="border-right: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); background:rgba(0,0,0,0.012); height: 110px;"></div>`;
     for(let d=1; d<=end.getDate(); d++) {
-        const ds = new Date(currentDate.getFullYear(), currentDate.getMonth(), d).toISOString().slice(0,10), active = ds === new Date().toISOString().slice(0, 10);
-        const dayP = plans.filter(p => ds >= p.start_time.slice(0,10) && ds <= p.end_time.slice(0,10));
-        const dayT = tasks.filter(t => t.due_date && t.due_date.startsWith(ds));
+        const d_obj = new Date(currentDate.getFullYear(), currentDate.getMonth(), d);
+        const ds = formatDateToYYYYMMDD(d_obj), active = ds === formatDateToYYYYMMDD(new Date());
+        const dayP = plans.filter(p => ds >= formatDateToYYYYMMDD(p.start_time) && ds <= formatDateToYYYYMMDD(p.end_time));
+        const dayT = tasks.filter(t => t.due_date && formatDateToYYYYMMDD(t.due_date) === ds);
         const allDayItems = [
             ...dayT.map(x => ({ ...x, displayType: 'task' })),
             ...dayP.map(x => ({ ...x, displayType: 'plan' }))
