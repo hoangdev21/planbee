@@ -327,20 +327,62 @@ const renderPlanningUI = (container, tasks, habits, plans, params = {}) => {
              container.innerHTML = `
                 <form id="plan-form" class="fade-in">
                     <div class="form-group" style="margin-bottom:20px;"><label style="font-weight:700; display:block; margin-bottom:8px; font-size:0.9rem;">Tiêu đề kế hoạch</label><input type="text" name="title" value="${item?item.title:''}" required style="width:100%; padding:14px; border-radius:12px; border:1.5px solid var(--border-color); font-weight:700;"></div>
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px;">
-                        <div class="form-group"><label style="font-weight:700; font-size:0.9rem;">Bắt đầu</label><input type="datetime-local" name="start_time" value="${item?item.start_time.slice(0,16):''}" required style="width:100%; padding:12px; border-radius:10px; border:1px solid var(--border-color);"></div>
-                        <div class="form-group"><label style="font-weight:700; font-size:0.9rem;">Kết thúc</label><input type="datetime-local" name="end_time" value="${item?item.end_time.slice(0,16):''}" required style="width:100%; padding:12px; border-radius:10px; border:1px solid var(--border-color);"></div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:12px;">
+                        <div class="form-group">
+                            <label style="font-weight:800; font-size:0.8rem; color:var(--text-muted); margin-bottom:8px; display:block;">BẮT ĐẦU</label>
+                            <div class="modern-input-wrapper">
+                                <i class="far fa-calendar-alt"></i>
+                                <input type="datetime-local" name="start_time" id="plan-start" value="${item?item.start_time.slice(0,16):''}" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label style="font-weight:800; font-size:0.8rem; color:var(--text-muted); margin-bottom:8px; display:block;">KẾT THÚC</label>
+                            <div class="modern-input-wrapper">
+                                <i class="far fa-calendar-check"></i>
+                                <input type="datetime-local" name="end_time" id="plan-end" value="${item?item.end_time.slice(0,16):''}" required>
+                            </div>
+                        </div>
                     </div>
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px;">
-                        <div class="form-group"><label style="font-weight:700; font-size:0.9rem;">Mức độ</label><select name="priority" style="width:100%; padding:12px; border-radius:10px; border:1px solid var(--border-color);"><option value="low" ${item?.priority==='low'?'selected':''}>Thấp</option><option value="medium" ${item?.priority==='medium'||!item?'selected':''}>Trung bình</option><option value="high" ${item?.priority==='high'?'selected':''}>Quan trọng</option></select></div>
-                        <div class="form-group"><label style="font-weight:700; font-size:0.9rem;">Màu nền</label><div style="display:flex; gap:8px; flex-wrap:wrap;">${PRESET_COLORS.map(c=>`<div class="color-circle ${item?.color===c?'active':''}" data-color="${c}" style="width:22px; height:22px; border-radius:50%; background:${c}; cursor:pointer; border:2.5px solid transparent;"></div>`).join('')}</div><input type="hidden" name="color" id="selected-color" value="${item?.color||PRESET_COLORS[0]}"></div>
+
+                    <!-- Quick Time Presets Bar -->
+                    <div class="quick-time-bar" style="display:flex; gap:8px; margin-bottom:24px; overflow-x:auto; padding-bottom:4px;">
+                        <button type="button" class="q-btn" onclick="const d=new Date(); const s=new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,16); document.getElementById('plan-start').value=s; d.setHours(d.getHours()+1); const e=new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,16); document.getElementById('plan-end').value=e;">Bây giờ</button>
+                        <button type="button" class="q-btn" onclick="const d=new Date(); d.setDate(d.getDate()+1); d.setHours(8,0,0,0); const s=new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,16); document.getElementById('plan-start').value=s; d.setHours(9); const e=new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,16); document.getElementById('plan-end').value=e;">Sáng mai</button>
+                        <button type="button" class="q-btn" onclick="const d=new Date(); d.setHours(14,0,0,0); const s=new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,16); document.getElementById('plan-start').value=s; d.setHours(16); const e=new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,16); document.getElementById('plan-end').value=e;">Chiều nay</button>
                     </div>
-                    <textarea name="description" rows="3" placeholder="Ghi chú thêm..." style="width:100%; padding:12px; border-radius:10px; border:1.5px solid var(--border-color); margin-bottom:24px;">${item?.description||''}</textarea>
-                    <div style="display:flex; justify-content:flex-end; gap:12px;"><button type="button" id="c-btn" class="btn btn-outline" style="padding:12px 24px; border-radius:10px;">Hủy bỏ</button><button type="submit" class="btn btn-primary" style="padding:12px 36px; border-radius:10px; font-weight:800;">Lưu thay đổi</button></div>
+
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px;">
+                        <div class="form-group"><label style="font-weight:700; font-size:0.9rem;">Mức độ</label><select name="priority" style="width:100%; padding:13px; border-radius:14px; border:2px solid var(--border-color); font-weight:600; background:var(--input-bg);"><option value="low" ${item?.priority==='low'?'selected':''}>Thấp</option><option value="medium" ${item?.priority==='medium'||!item?'selected':''}>Trung bình</option><option value="high" ${item?.priority==='high'?'selected':''}>Quan trọng</option></select></div>
+                        <div class="form-group"><label style="font-weight:700; font-size:0.9rem;">Màu nền</label><div style="display:flex; gap:10px; flex-wrap:wrap; padding: 5px 0;">${PRESET_COLORS.map(c=>`<div class="color-circle ${item?.color===c?'active':''}" data-color="${c}" style="width:28px; height:28px; border-radius:50%; background:${c}; cursor:pointer; border:3px solid transparent; transition: all 0.2s; display: flex; align-items: center; justify-content: center; color: white; font-size: 0.7rem;">${item?.color===c?'<i class="fas fa-check"></i>':''}</div>`).join('')}</div><input type="hidden" name="color" id="selected-color" value="${item?.color||PRESET_COLORS[0]}"></div>
+                    </div>
+                    <textarea name="description" rows="3" placeholder="Ghi chú thêm..." style="width:100%; padding:14px; border-radius:14px; border:2px solid var(--border-color); margin-bottom:24px; background:var(--input-bg); font-family:inherit;">${item?.description||''}</textarea>
+                    <div style="display:flex; justify-content:flex-end; gap:12px;"><button type="button" id="c-btn" class="btn btn-outline" style="padding:12px 24px; border-radius:14px; font-weight:800;">Hủy bỏ</button><button type="submit" class="btn btn-primary" style="padding:12px 40px; border-radius:14px; font-weight:850; background:var(--primary-color);">Lưu thay đổi</button></div>
                 </form>
             `;
+            
+            // Add Styles for modern inputs if not present
+            if (!document.getElementById('modern-form-styles')) {
+                const s = document.createElement('style');
+                s.id = 'modern-form-styles';
+                s.innerHTML = `
+                    .modern-input-wrapper { position: relative; display: flex; align-items: center; background: var(--input-bg); border: 2px solid var(--border-color); border-radius: 14px; transition: all 0.3s; overflow: hidden; }
+                    .modern-input-wrapper:focus-within { border-color: var(--primary-color); box-shadow: 0 0 0 4px var(--primary-light)15; transform: translateY(-1px); }
+                    .modern-input-wrapper i { position: absolute; left: 14px; color: var(--primary-color); font-size: 1rem; pointer-events: none; opacity: 0.8; }
+                    .modern-input-wrapper input { width: 100%; border: none; background: transparent; padding: 13px 12px 13px 44px; font-family: inherit; font-size: 0.95rem; font-weight: 700; color: var(--text-main); outline: none; cursor: pointer; }
+                    
+                    .q-btn { background: var(--input-bg); border: 1.5px solid var(--border-color); padding: 7px 16px; border-radius: 20px; font-size: 0.75rem; font-weight: 800; color: var(--text-muted); cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+                    .q-btn:hover { background: var(--primary-light); color: var(--primary-color); border-color: var(--primary-color); }
+                `;
+                document.head.appendChild(s);
+            }
+
             const f = document.getElementById('plan-form');
-            container.querySelectorAll('.color-circle').forEach(c=>c.onclick=()=>{container.querySelectorAll('.color-circle').forEach(x=>x.classList.remove('active'));c.classList.add('active');document.getElementById('selected-color').value=c.dataset.color;});
+            container.querySelectorAll('.color-circle').forEach(c=>c.onclick=()=>{
+                container.querySelectorAll('.color-circle').forEach(x=>{ x.classList.remove('active'); x.innerHTML = ''; });
+                c.classList.add('active');
+                c.innerHTML = '<i class="fas fa-check"></i>';
+                document.getElementById('selected-color').value=c.dataset.color;
+            });
             document.getElementById('c-btn').onclick=()=>item?(modalTab='view',renderModalBody(item,type)):(document.getElementById('plan-modal').style.display='none');
             f.onsubmit=async(e)=>{e.preventDefault(); await api.post('/plans/add',Object.fromEntries(new FormData(f).entries())); document.getElementById('plan-modal').style.display='none'; renderPlanning(window.planningContainer);};
         }

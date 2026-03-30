@@ -91,13 +91,13 @@ const updateHabitsUI = (container) => {
                         
                         return `
                             <div class="habit-card-elite ${isDone ? 'is-completed' : ''}">
+                                ${streak > 0 ? `<div class="streak-tag"><i class="fas fa-fire"></i> ${streak}</div>` : ''}
                                 <div class="card-inner">
                                     <div class="card-top">
                                         <div class="habit-icon-wrap">
                                             <div class="icon-sphere">
                                                 <img src="${isDone ? '/complete.png' : (habit.frequency === 'daily' ? '/lightning.png' : '/thunder.png')}" alt="icon">
                                             </div>
-                                            ${streak > 0 ? `<div class="streak-tag"><i class="fas fa-fire"></i> ${streak}</div>` : ''}
                                         </div>
                                         <div class="habit-main-data">
                                             <h4 class="habit-title">${habit.title}</h4>
@@ -192,10 +192,10 @@ const updateHabitsUI = (container) => {
         </div>
 
         <style>
-            .habits-premium-container { padding: 16px; box-sizing: border-box; min-height: 100vh; max-width: 1400px; margin: 0 auto; }
+            .habits-premium-container { padding: 0; box-sizing: border-box; min-height: 100vh; width: 100%; margin: 0; }
             
             /* Elite Dashboard Header */
-            .habits-elite-dashboard { margin-bottom: 32px; display: flex; flex-direction: column; gap: 20px; }
+            .habits-elite-dashboard { margin-bottom: 32px; display: flex; flex-direction: column; gap: 24px; padding: 24px 16px 0; }
             .elite-title { font-size: 1.8rem; font-weight: 900; color: var(--text-main); margin-bottom: 4px; letter-spacing: -0.5px; }
             .elite-subtitle { color: var(--text-muted); font-weight: 600; font-size: 0.9rem; opacity: 0.8; }
 
@@ -225,7 +225,7 @@ const updateHabitsUI = (container) => {
             }
 
             /* Navigator Bar */
-            .habit-navigator-bar { display: flex; flex-direction: column; gap: 20px; margin-bottom: 24px; padding-bottom: 12px; border-bottom: 1.5px solid var(--border-color); }
+            .habit-navigator-bar { display: flex; flex-direction: column; gap: 20px; margin-bottom: 24px; padding: 0 16px 12px 16px; border-bottom: 1.5px solid var(--border-color); }
             .pills-container { display: flex; background: var(--input-bg); padding: 5px; border-radius: 16px; gap: 4px; }
             .pill-btn { flex: 1; padding: 10px; border-radius: 12px; border: none; background: transparent; color: var(--text-muted); font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: 0.3s; }
             .pill-btn.active { background: white; color: var(--primary-color); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
@@ -235,16 +235,16 @@ const updateHabitsUI = (container) => {
             .search-master-wrap input { width: 100%; padding: 12px 16px 12px 48px; border-radius: 16px; border: 1.5px solid var(--border-color); background: var(--card-bg); font-family: inherit; font-size: 0.9rem; font-weight: 600; outline: none; }
 
             /* Grid & Cards (5 per row on desktop) */
-            .habits-grid-premium { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+            .habits-grid-premium { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 0 16px 40px; }
             
-            .habit-card-elite { background: var(--card-bg); border-radius: 20px; border: 1.5px solid var(--border-color); padding: 16px; transition: 0.4s; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); }
+            .habit-card-elite { position: relative !important; background: var(--card-bg); border-radius: 20px; border: 1.5px solid var(--border-color); padding: 16px; transition: 0.4s; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); }
             .habit-card-elite:hover { transform: translateY(-6px); border-color: var(--primary-color); }
             .habit-card-elite.is-completed { border-color: var(--success); background: linear-gradient(135deg, var(--card-bg) 0%, rgba(34, 197, 94, 0.03) 100%); }
 
             .card-top { display: flex; gap: 12px; align-items: center; }
             .icon-sphere { width: 44px; height: 44px; border-radius: 12px; background: var(--input-bg); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
             .icon-sphere img { width: 30px; height: 30px; }
-            .streak-tag { position: absolute; top: -8px; right: -8px; background: #ff4757; color: white; font-size: 0.6rem; padding: 2px 6px; border-radius: 8px; font-weight: 900; border: 2px solid var(--card-bg); }
+            .streak-tag { position: absolute; top: -10px; right: -10px; background: #ff4757; color: white; font-size: 0.7rem; padding: 4px 8px; border-radius: 10px; font-weight: 900; border: 3px solid white; z-index: 15; box-shadow: 0 4px 10px rgba(255, 71, 87, 0.3); display: flex; align-items: center; gap: 4px; }
 
             .habit-title { font-size: 0.95rem; font-weight: 850; color: var(--text-main); margin-bottom: 4px; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
             .habit-badges { display: flex; gap: 6px; }
@@ -281,7 +281,7 @@ const updateHabitsUI = (container) => {
             .btn-cancel-elite { flex: 1; padding: 16px; border-radius: 16px; border: 2px solid var(--border-color); background: transparent; color: var(--text-muted); font-weight: 800; cursor: pointer; }
 
             @media (min-width: 900px) {
-                .habits-premium-container { padding: 40px; }
+                .habits-premium-container { padding: 0; }
                 .habits-elite-dashboard { flex-direction: row; justify-content: space-between; align-items: flex-end; }
                 .stats-master-card { flex-direction: row; align-items: center; width: auto; min-width: 580px; gap: 40px; }
                 .stats-main-flow { flex: 1; gap: 40px; }
