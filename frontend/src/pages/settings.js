@@ -31,54 +31,46 @@ export const renderSettings = async (container) => {
 
     const render = () => {
         container.innerHTML = `
-            <div class="settings-root fade-in" style="padding: 24px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px;">
-                    <div>
-                        <h2 style="font-size: 1.8rem; font-weight: 800; color: var(--text-main); margin-bottom: 4px;">Cài đặt hệ thống</h2>
-                        <p style="color: var(--text-muted); font-weight: 500;">Quản lý tài khoản, thông báo và cấu hình cá nhân.</p>
-                    </div>
+            <div class="settings-root fade-in">
+                <div class="settings-header">
+                    <h2 class="settings-title">Cài đặt</h2>
+                    <p class="settings-subtitle">Cá nhân hóa trải nghiệm PlanBee của bạn.</p>
                 </div>
 
-                <div class="settings-layout">
-                    <!-- Sidebar Menu -->
-                    <div class="settings-sidebar">
-                        <div class="settings-menu-card">
+                <div class="settings-container">
+                    <!-- Navigation Tabs -->
+                    <div class="settings-nav-wrapper">
+                        <div class="settings-nav-scroll">
                             ${['personal', 'password', 'notifications', 'appearance', 'security'].map(tab => {
                                 const labels = { 
-                                    personal: 'Thông tin cá nhân', 
-                                    password: 'Đổi mật khẩu', 
+                                    personal: 'Cá nhân', 
+                                    password: 'Bảo mật', 
                                     notifications: 'Thông báo', 
-                                    appearance: 'Giao diện & Chủ đề', 
-                                    security: 'Bảo mật & Quyền riêng tư' 
+                                    appearance: 'Giao diện', 
+                                    security: 'Quyền riêng tư' 
                                 };
                                 const icons = {
-                                    personal: 'fa-user',
-                                    password: 'fa-lock',
+                                    personal: 'fa-user-circle',
+                                    password: 'fa-shield-halved',
                                     notifications: 'fa-bell',
                                     appearance: 'fa-palette',
-                                    security: 'fa-shield-halved'
+                                    security: 'fa-lock'
                                 };
                                 const unreadCount = notifications.filter(n => !n.is_read).length;
                                 return `
-                                    <button class="settings-nav-item ${activeTab === tab ? 'active' : ''}" data-tab="${tab}">
+                                    <button class="settings-tab-btn ${activeTab === tab ? 'active' : ''}" data-tab="${tab}">
                                         <i class="fas ${icons[tab]}"></i>
                                         <span>${labels[tab]}</span>
-                                        ${tab === 'notifications' && unreadCount > 0 ? `<span class="noti-dot-badge">${unreadCount > 9 ? '9+' : unreadCount}</span>` : ''}
+                                        ${tab === 'notifications' && unreadCount > 0 ? `<span class="tab-badge">${unreadCount > 9 ? '9+' : unreadCount}</span>` : ''}
                                     </button>
                                 `;
                             }).join('')}
-                            <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border-color);">
-                                <button class="settings-nav-item danger" style="color: var(--danger);">
-                                    <i class="fas fa-trash-can"></i>
-                                    <span>Xóa tài khoản</span>
-                                </button>
-                            </div>
                         </div>
                     </div>
 
-                    <!-- Main Content Panel -->
-                    <div class="settings-panel">
-                        <div class="settings-card shadow-premium">
+                    <!-- Content Panel -->
+                    <div class="settings-main-panel">
+                        <div class="settings-content-card">
                             ${renderTabContent()}
                         </div>
                     </div>
@@ -86,120 +78,117 @@ export const renderSettings = async (container) => {
             </div>
 
             <style>
-                .settings-layout { display: grid; grid-template-columns: 280px 1fr; gap: 32px; }
+                .settings-root { padding: 16px; width: 100%; max-width: 100%; margin: 0; min-height: 100vh; box-sizing: border-box; }
                 
-                .settings-menu-card {
-                    background: var(--card-bg);
-                    border-radius: 20px;
-                    border: 1.5px solid var(--border-color);
-                    padding: 12px;
-                    display: flex;
-                    flex-direction: column;
-                    gap: 6px;
-                    box-shadow: var(--shadow-sm);
-                    position: sticky;
-                    top: 24px;
-                }
-                
-                .settings-nav-item {
-                    display: flex;
-                    align-items: center;
-                    gap: 14px;
-                    padding: 14px 18px;
-                    border-radius: 14px;
-                    border: none;
-                    background: transparent;
-                    color: var(--text-muted);
-                    font-weight: 700;
-                    font-size: 0.95rem;
-                    cursor: pointer;
-                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                    text-align: left;
-                    position: relative;
-                }
-                
-                .settings-nav-item:hover { background: var(--primary-light); color: var(--primary-color); transform: translateX(5px); }
-                .settings-nav-item.active { background: var(--primary-light); color: var(--primary-color); }
-                .settings-nav-item i { width: 22px; font-size: 1.1rem; text-align: center; }
+                .settings-header { margin-bottom: 24px; padding: 0 4px; }
+                .settings-title { font-size: 1.75rem; font-weight: 800; color: var(--text-main); margin-bottom: 6px; letter-spacing: -0.5px; }
+                .settings-subtitle { font-size: 0.9rem; color: var(--text-muted); font-weight: 500; }
 
-                .noti-dot-badge {
-                    position: absolute;
-                    top: 10px;
-                    right: 12px;
-                    background: var(--danger);
-                    color: white;
-                    font-size: 0.65rem;
-                    padding: 2px 6px;
-                    border-radius: 10px;
-                    font-weight: 800;
-                    border: 2px solid var(--card-bg);
+                .settings-container { display: flex; flex-direction: column; gap: 20px; width: 100%; }
+
+                /* Horizontal Tabs (Mobile-First) */
+                .settings-nav-wrapper {
+                    position: sticky; top: 0; z-index: 100;
+                    margin: 0 -16px; padding: 4px 16px;
+                    background: var(--bg-main);
+                    overflow-x: auto; scrollbar-width: none;
+                }
+                .settings-nav-wrapper::-webkit-scrollbar { display: none; }
+                
+                .settings-nav-scroll { display: flex; gap: 8px; padding-bottom: 8px; }
+
+                .settings-tab-btn {
+                    flex: 0 0 auto; display: flex; align-items: center; gap: 10px;
+                    padding: 10px 18px; border-radius: 12px; border: 1.5px solid var(--border-color);
+                    background: var(--card-bg); color: var(--text-muted); font-weight: 700;
+                    font-size: 0.85rem; cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                    white-space: nowrap; position: relative;
+                }
+                .settings-tab-btn i { font-size: 1rem; opacity: 0.7; }
+                .settings-tab-btn.active { 
+                    background: var(--primary-color) !important; color: white !important; 
+                    border-color: var(--primary-color) !important;
+                    box-shadow: 0 4px 12px rgba(255, 167, 38, 0.2);
                 }
 
-                .settings-panel .settings-card {
-                    background: var(--card-bg);
-                    border-radius: 24px;
-                    border: 1.5px solid var(--border-color);
-                    padding: 40px;
-                    min-height: 550px;
+                /* Desktop Adaptations (Full Width) */
+                @media (min-width: 900px) {
+                    .settings-container { flex-direction: row; align-items: flex-start; gap: 24px; }
+                    .settings-nav-wrapper { 
+                        position: sticky; top: 16px; width: 220px; margin: 0; padding: 0;
+                        background: transparent; flex-shrink: 0;
+                    }
+                    .settings-nav-scroll { flex-direction: column; width: 100%; gap: 4px; }
+                    .settings-tab-btn { width: 100%; border: none; background: transparent; padding: 12px 14px; font-size: 0.95rem; }
+                    .settings-main-panel { flex: 1; min-width: 0; } /* Allow flexing to fill width */
                 }
-                .shadow-premium { box-shadow: var(--shadow-md); }
 
-                .form-group { margin-bottom: 24px; }
-                .form-group label { display: block; font-weight: 800; color: var(--text-main); font-size: 0.9rem; margin-bottom: 10px; }
+                .settings-content-card {
+                    background: var(--card-bg); border-radius: 20px;
+                    border: 1.5px solid var(--border-color); padding: 32px;
+                    box-shadow: var(--shadow-sm); animation: slideUp 0.3s ease-out;
+                    width: 100%; box-sizing: border-box;
+                }
+
+                @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+                /* Form Styles */
+                .form-group { margin-bottom: 20px; }
+                .form-group label { display: block; font-weight: 800; color: var(--text-main); font-size: 0.85rem; margin-bottom: 8px; opacity: 0.8; }
                 .form-group input, .form-group textarea, .form-group select {
-                    width: 100%;
-                    padding: 12px 16px;
-                    border-radius: 12px;
-                    border: 1.5px solid var(--border-color);
-                    background: var(--input-bg);
-                    color: var(--text-main);
-                    font-family: inherit; font-weight: 600; font-size: 0.95rem; box-sizing: border-box;
+                    width: 100%; padding: 12px 14px; border-radius: 12px;
+                    border: 1.5px solid var(--border-color); background: var(--input-bg);
+                    color: var(--text-main); font-family: inherit; font-weight: 650;
+                    font-size: 0.9rem; transition: all 0.2s; outline: none; box-sizing: border-box;
                 }
-                .form-group input:focus { border-color: var(--primary-color); outline: none; }
+                .form-group input:focus { border-color: var(--primary-color); background: white; box-shadow: 0 0 0 4px var(--primary-light); }
                 
-                .btn-save {
-                    background: var(--primary-color); color: white; border: none; padding: 12px 32px; border-radius: 14px;
-                    font-weight: 800; cursor: pointer; transition: all 0.3s;
-                }
+                .btn-save { padding: 12px 32px; background: var(--primary-color); color: white; border: none; border-radius: 12px; font-weight: 800; cursor: pointer; transition: 0.3s; }
                 .btn-save:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(255,167,38,0.2); }
 
-                /* Notifications within settings */
-                .noti-list-settings { display: flex; flex-direction: column; gap: 12px; margin-top: 24px; }
+                /* Notifications Tab Styles */
+                .noti-list-settings { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
                 .noti-tile {
-                    display: flex; gap: 16px; padding: 18px; border-radius: 18px; border: 1.5px solid var(--border-color);
-                    background: var(--card-bg); transition: all 0.2s; align-items: center;
+                    display: flex; align-items: center; gap: 14px; padding: 16px; 
+                    border-radius: 16px; border: 1.5px solid var(--border-color);
+                    background: var(--card-bg); transition: all 0.2s;
                 }
-                .noti-tile.unread { background: rgba(255, 167, 38, 0.02); border-left: 4px solid var(--primary-color); }
                 .noti-tile:hover { transform: translateY(-2px); border-color: var(--primary-color); box-shadow: var(--shadow-sm); }
-                
-                .noti-tile-icon {
-                    width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center;
-                    justify-content: center; font-size: 1.2rem; flex-shrink: 0;
-                }
-                .noti-tile-body { flex: 1; }
-                .noti-tile-text { font-weight: 700; color: var(--text-main); font-size: 0.95rem; margin-bottom: 4px; }
-                .noti-tile-date { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
-                
-                .noti-tile-delete {
-                    padding: 8px; border-radius: 8px; color: var(--text-light); border: none; background: transparent; cursor: pointer;
-                }
-                .noti-tile-delete:hover { color: var(--danger); background: rgba(214, 48, 49, 0.05); }
+                .noti-tile.unread { border-left: 4px solid var(--primary-color); background: rgba(255, 167, 38, 0.02); }
+                .noti-tile-icon { width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0; }
+                .noti-tile-body { flex: 1; min-width: 0; }
+                .noti-tile-text { font-weight: 700; font-size: 0.9rem; color: var(--text-main); margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+                .noti-tile-date { font-size: 0.75rem; color: var(--text-light); }
+                .noti-tile-delete { background: none; border: none; padding: 8px; color: var(--text-light); cursor: pointer; border-radius: 8px; }
+                .noti-tile-delete:hover { color: var(--danger); background: rgba(214, 48, 49, 0.1); }
 
-                @media (max-width: 900px) {
-                    .settings-layout { grid-template-columns: 1fr; }
-                }
+                /* Password Toggle Styles */
+                .pass-input-wrapper { position: relative; }
+                .pass-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1rem; }
+
+                /* Appearance Switch Styles */
+                .bee-switch { position: relative; display: inline-block; width: 50px; height: 26px; }
+                .bee-switch input { opacity: 0; width: 0; height: 0; }
+                .bee-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #e0e0e0; transition: .4s; border-radius: 34px; }
+                .bee-slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px; background: white; transition: .4s; border-radius: 50%; }
+                input:checked + .bee-slider { background: var(--primary-color); }
+                input:checked + .bee-slider:before { transform: translateX(24px); }
+
+                /* Accent Color Options */
+                .accent-color-option { width: 36px; height: 36px; border-radius: 10px; cursor: pointer; transition: 0.2s; border: 3px solid transparent; display: flex; align-items: center; justify-content: center; }
+                .accent-color-option.active { border-color: rgba(0,0,0,0.1); transform: scale(1.1); }
             </style>
         `;
 
-        // Interaction Logic
-        container.querySelectorAll('.settings-nav-item[data-tab]').forEach(btn => {
+        // Interaction Logic - Sync with new tab buttons
+        container.querySelectorAll('.settings-tab-btn[data-tab]').forEach(btn => {
             btn.onclick = () => {
                 activeTab = btn.dataset.tab;
                 render();
             };
         });
 
-        // Personal Form
+        // Personal Form Logic
         const pForm = document.getElementById('personal-form');
         if (pForm) {
             pForm.onsubmit = async (e) => {
@@ -228,15 +217,7 @@ export const renderSettings = async (container) => {
                 const token = userData.telegram_token;
                 if (!token) return;
                 navigator.clipboard.writeText(token);
-                
-                const originalContent = copyBtn.innerHTML;
-                copyBtn.innerHTML = '<i class="fas fa-check"></i> Đã chép';
-                copyBtn.style.background = '#27ae60';
-                
-                setTimeout(() => {
-                    copyBtn.innerHTML = originalContent;
-                    copyBtn.style.background = 'var(--primary-color)';
-                }, 2000);
+                api.showBeeAlert('Đã sao chép mã token! 📋');
             };
         }
 
@@ -255,7 +236,7 @@ export const renderSettings = async (container) => {
             };
         }
 
-        // Password Form
+        // 3. Password Form Logic
         const passForm = document.getElementById('pass-form');
         if (passForm) {
             passForm.onsubmit = async (e) => {
@@ -379,82 +360,74 @@ export const renderSettings = async (container) => {
                     <div style="display: flex; justify-content: flex-end;"><button class="btn-save">Lưu thay đổi</button></div>
                 </form>
 
-                <!-- Telegram Connection Section -->
-                <div class="telegram-config-box">
-                    <div class="tg-header">
-                        <div class="tg-title-group">
-                            <i class="fab fa-telegram-plane"></i>
-                            <h4>Liên kết Telegram Bot</h4>
-                        </div>
-                        <div class="tg-status ${userData.telegram_chat_id ? 'connected' : ''}">
-                            <i class="fas ${userData.telegram_chat_id ? 'fa-check-circle' : 'fa-circle-info'}"></i>
-                            ${userData.telegram_chat_id ? 'Đã liên kết' : 'Chưa liên kết'}
+                <!-- Telegram Connection Section (Compact Redesign) -->
+                <div class="telegram-config-box-mini">
+                    <div class="tg-mini-header">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <i class="fab fa-telegram-plane" style="color: #0088cc; font-size: 1.2rem;"></i>
+                            <h4 style="margin: 0; font-size: 0.95rem; font-weight: 800; color: var(--text-main);">Liên kết Telegram Bot</h4>
+                            <div class="tg-status-pill ${userData.telegram_chat_id ? 'connected' : ''}">
+                                ${userData.telegram_chat_id ? 'Đã liên kết' : 'Chưa liên kết'}
+                            </div>
                         </div>
                     </div>
                     
-                    <p class="tg-desc">Kết nối để nhận thông báo đẩy và ra lệnh bằng giọng nói/văn bản trực tiếp từ điện thoại.</p>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 16px; font-weight: 500;">Nhận thông báo và điều khiển Bee qua Telegram.</p>
                     
-                    <div class="tg-id-box">
-                        <div class="tg-id-display">${userData.telegram_token || 'Đang tải...'}</div>
-                        <button id="copy-telegram-token" class="tg-action-btn copy">
-                            <i class="far fa-copy"></i> Sao chép
-                        </button>
-                        ${userData.telegram_chat_id ? `
-                            <button id="unlink-telegram" class="tg-action-btn unlink">
-                                <i class="fas fa-link-slash"></i> Hủy liên kết
+                    <div class="tg-id-strip">
+                        <div class="tg-token-val">${userData.telegram_token || '---'}</div>
+                        <div class="tg-actions-wrap">
+                            <button id="copy-telegram-token" class="tg-mini-btn copy" title="Sao chép mã">
+                                <i class="far fa-copy"></i> Sao chép
                             </button>
-                        ` : `
-                            <a href="https://t.me/PlanBeeAI_Bot" target="_blank" class="tg-action-btn open">
-                                Mở Bot <i class="fas fa-external-link-alt"></i>
-                            </a>
-                        `}
+                            ${userData.telegram_chat_id ? `
+                                <button id="unlink-telegram" class="tg-mini-btn delete" title="Hủy liên kết">
+                                    <i class="fas fa-link-slash"></i> Hủy kết nối
+                                </button>
+                            ` : `
+                                <a href="https://t.me/PlanBeeAI_Bot" target="_blank" class="tg-mini-btn open">
+                                    Mở Bot <i class="fas fa-external-link-alt"></i>
+                                </a>
+                            `}
+                        </div>
                     </div>
                 </div>
 
                 <style>
-                    .telegram-config-box {
-                        margin-top: 32px;
-                        padding: 24px;
-                        background: var(--card-bg);
-                        border-radius: 20px;
-                        border: 1px solid var(--border-color);
-                        box-shadow: var(--shadow-sm);
+                    .telegram-config-box-mini {
+                        margin-top: 24px; padding: 20px;
+                        background: var(--card-bg); border-radius: 16px;
+                        border: 1px solid var(--border-color); border-left: 4px solid #0088cc;
                     }
-                    .tg-header {
-                        display: flex;
-                        justify-content: space-between;
-                        align-items: center;
-                        margin-bottom: 12px;
+                    .tg-mini-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+                    .tg-status-pill {
+                        font-size: 0.65rem; font-weight: 900; padding: 2px 8px; border-radius: 6px;
+                        background: #f1f2f6; color: var(--text-muted); text-transform: uppercase;
                     }
-                    .tg-title-group { display: flex; align-items: center; gap: 10px; }
-                    .tg-title-group i { color: #0088cc; font-size: 1.4rem; }
-                    .tg-title-group h4 { margin: 0; font-size: 1.05rem; font-weight: 800; color: var(--text-main); }
+                    .tg-status-pill.connected { background: #e8f5e9; color: #2e7d32; }
                     
-                    .tg-status {
-                        font-size: 0.75rem; font-weight: 800; padding: 4px 12px; border-radius: 20px;
-                        background: var(--bg-hover); color: var(--text-muted); display: flex; align-items: center; gap: 6px;
+                    .tg-id-strip {
+                        display: flex; align-items: center; gap: 8px;
+                        background: var(--input-bg); padding: 4px 4px 4px 14px; border-radius: 12px;
+                        border: 1px solid var(--border-color); overflow: hidden;
                     }
-                    .tg-status.connected { background: rgba(39, 174, 96, 0.1); color: #27ae60; }
+                    .tg-token-val {
+                        flex: 1; font-family: 'JetBrains Mono', monospace; font-weight: 800;
+                        color: var(--primary-color); font-size: 0.9rem; letter-spacing: 0.5px;
+                        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+                    }
+                    .tg-actions-wrap { display: flex; gap: 4px; flex-shrink: 0; }
                     
-                    .tg-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 20px; font-weight: 500; }
+                    .tg-mini-btn {
+                        padding: 8px 12px; border-radius: 8px; border: none; font-weight: 800; font-size: 0.75rem;
+                        cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 6px;
+                        text-decoration: none; white-space: nowrap;
+                    }
+                    .tg-mini-btn.copy { background: var(--primary-color); color: white; }
+                    .tg-mini-btn.delete { background: #fee2e2; color: #ef4444; }
+                    .tg-mini-btn.open { background: #0088cc; color: white; }
                     
-                    .tg-id-box {
-                        display: flex; gap: 10px; align-items: stretch;
-                        background: var(--input-bg); padding: 8px; border-radius: 14px; border: 1.5px solid var(--border-color);
-                    }
-                    .tg-id-display {
-                        flex: 1; display: flex; align-items: center; justify-content: center;
-                        font-family: 'JetBrains Mono', monospace; font-weight: 800; color: var(--primary-color);
-                        font-size: 1.1rem; letter-spacing: 1px;
-                    }
-                    .tg-action-btn {
-                        padding: 10px 16px; border-radius: 10px; border: none; font-weight: 800; font-size: 0.85rem;
-                        cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 8px; text-decoration: none;
-                    }
-                    .tg-action-btn.copy { background: var(--primary-color); color: white; }
-                    .tg-action-btn.unlink { background: var(--danger)15; color: var(--danger); }
-                    .tg-action-btn.open { background: #0088cc; color: white; }
-                    .tg-action-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+                    .tg-mini-btn:hover { opacity: 0.8; transform: translateY(-1px); }
                 </style>
             `;
         } else if (activeTab === 'password') {

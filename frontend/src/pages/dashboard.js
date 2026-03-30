@@ -80,61 +80,57 @@ export const renderDashboard = async (container) => {
                                  <p style="font-size: 0.9rem;">Không có kế hoạch nào trong hôm nay.</p>
                              </div>
                          `}
-                     </div>
-                 </div>
- 
-                 <!-- Main Content Row: habits -->
-                 <div style="display: grid; grid-template-columns: 1fr; gap: 32px;">
-                     <!-- Habit Streaks -->
-                     <div class="dashboard-section-card" style="background: var(--card-bg); border-radius: 28px; border: 1.5px solid var(--border-color); box-shadow: var(--shadow-md); padding: 24px;">
-                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-                            <h3 style="font-size: 1.15rem; font-weight: 900; display: flex; align-items: center; gap: 12px; color: var(--text-main); margin: 0;">
-                                <img src="/tree.png" alt="habits" style="width: 28px; height: 28px; object-fit: contain;">
-                                Thói quen hàng ngày
-                            </h3>
-                             <a href="#/habits" class="btn-all">TẤT CẢ <i class="fas fa-arrow-right" style="font-size: 0.65rem;"></i></a>
-                         </div>
-                        <div class="habits-horizontal-container" style="display: flex; gap: 20px; overflow-x: auto; padding: 10px 4px 20px 4px; scroll-snap-type: x mandatory; scrollbar-width: none; -ms-overflow-style: none;">
-                            ${habits.length > 0 ? habits.map(habit => {
-                                const isDone = habit.last_completed && habit.last_completed.startsWith(formatDateToYYYYMMDD(new Date()));
-                                const streakPercent = Math.min(habit.current_streak * 10, 100);
-                                
-                                return `
-                                    <div class="habit-card ${isDone ? 'done' : ''}" style="flex: 0 0 280px; scroll-snap-align: start; background: var(--card-bg); border-radius: 24px; padding: 24px; border: 1.5px solid var(--border-color); box-shadow: var(--shadow-sm); transition: all 0.3s ease; display: flex; flex-direction: column; gap: 16px; cursor: pointer;">
-                                        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                                            <div style="width: 50px; height: 50px; border-radius: 14px; background: ${isDone ? 'rgba(0, 184, 148, 0.1)' : 'rgba(0,0,0,0.03)'}; display: flex; align-items: center; justify-content: center; border: 1.5px solid ${isDone ? 'var(--success)' : 'var(--border-color)'};">
-                                                <img src="${isDone ? '/complete.png' : (habit.frequency === 'daily' ? '/lightning.png' : '/thunder.png')}" style="width: 32px; height: 32px; object-fit: contain;">
-                                            </div>
-                                            <div style="text-align: right;">
-                                                <div style="font-size: 0.85rem; font-weight: 800; color: var(--success);">${habit.current_streak} ngày 🔥</div>
-                                                <div style="font-size: 0.65rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Chuỗi hiện tại</div>
-                                            </div>
-                                        </div>
-                                        
-                                        <div style="flex: 1;">
-                                            <div style="font-weight: 800; font-size: 1.15rem; color: ${isDone ? 'var(--success)' : 'var(--text-main)'}; margin-bottom: 6px; line-height: 1.2;">${habit.title}</div>
-                                            <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${habit.description || 'Xây dựng kỷ luật tốt mỗi ngày.'}</p>
-                                        </div>
+                    </div>
+                </div>
 
-                                        <div style="margin-top: 8px;">
-                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                                                <span style="font-size: 0.75rem; font-weight: 800; color: var(--text-light);">TIẾN TRÌNH</span>
-                                                <span style="font-size: 0.75rem; font-weight: 800; color: var(--text-main);">${streakPercent}%</span>
-                                            </div>
-                                            <div style="height: 6px; background: var(--border-color); border-radius: 10px; overflow: hidden;">
-                                                <div style="width: ${streakPercent}%; height: 100%; background: var(--success); border-radius: 10px; box-shadow: 0 0 10px rgba(0, 184, 148, 0.3);"></div>
-                                            </div>
+                <!-- Habits Section (Fixed Structure & Mobile Scroll) -->
+                <div class="dashboard-section-card" style="background: var(--card-bg); border-radius: 28px; border: 1.5px solid var(--border-color); box-shadow: var(--shadow-md); padding: 24px; width: 100%; max-width: 100%; overflow: hidden; box-sizing: border-box; position: relative;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                        <h3 style="font-size: 1.15rem; font-weight: 900; display: flex; align-items: center; gap: 12px; color: var(--text-main); margin: 0;">
+                            <img src="/tree.png" alt="habits" style="width: 28px; height: 28px; object-fit: contain;">
+                            Thói quen hàng ngày
+                        </h3>
+                        <a href="#/habits" class="btn-all">TẤT CẢ <i class="fas fa-arrow-right" style="font-size: 0.65rem;"></i></a>
+                    </div>
+                    
+                    <div class="habits-horizontal-container" style="display: flex; gap: 16px; overflow-x: auto; padding: 10px 4px 20px 4px; scroll-snap-type: x mandatory; scrollbar-width: none; -ms-overflow-style: none; -webkit-overflow-scrolling: touch;">
+                        ${habits.length > 0 ? habits.map(habit => {
+                            const isDone = habit.last_completed && habit.last_completed.startsWith(formatDateToYYYYMMDD(new Date()));
+                            const streakPercent = Math.min(habit.current_streak * 10, 100);
+                            
+                            return `
+                                <div class="habit-card ${isDone ? 'done' : ''}" style="scroll-snap-align: start; background: var(--card-bg); border-radius: 24px; padding: 24px; border: 1.5px solid var(--border-color); box-shadow: var(--shadow-sm); transition: all 0.3s ease; display: flex; flex-direction: column; gap: 16px; cursor: pointer;">
+                                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                        <div style="width: 50px; height: 50px; border-radius: 14px; background: ${isDone ? 'rgba(0, 184, 148, 0.1)' : 'rgba(0,0,0,0.03)'}; display: flex; align-items: center; justify-content: center; border: 1.5px solid ${isDone ? 'var(--success)' : 'var(--border-color)'};">
+                                            <img src="${isDone ? '/complete.png' : (habit.frequency === 'daily' ? '/lightning.png' : '/thunder.png')}" style="width: 32px; height: 32px; object-fit: contain;">
+                                        </div>
+                                        <div style="text-align: right;">
+                                            <div style="font-size: 0.85rem; font-weight: 800; color: var(--success);">${habit.current_streak} ngày 🔥</div>
+                                            <div style="font-size: 0.65rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Chuỗi</div>
                                         </div>
                                     </div>
-                                `;
-                            }).join('') : `<div style="flex: 1; padding: 60px; text-align: center; border: 2px dashed var(--border-color); border-radius: 24px; color: var(--text-light);">
-                                <i class="fas fa-seedling" style="font-size: 2rem; margin-bottom: 12px; display: block; opacity: 0.5;"></i>
-                                <p style="font-weight: 700;">Bạn chưa có thói quen nào.</p>
-                                <p style="font-size: 0.85rem;">Hãy bắt đầu ngay hôm nay!</p>
-                            </div>`}
-                        </div>
-                     </div>
-                 </div>
+                                    
+                                    <div style="flex: 1;">
+                                        <div style="font-weight: 800; font-size: 1.15rem; color: ${isDone ? 'var(--success)' : 'var(--text-main)'}; margin-bottom: 6px; line-height: 1.2;">${habit.title}</div>
+                                        <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${habit.description || 'Xây dựng kỷ luật mỗi ngày.'}</p>
+                                    </div>
+                                    
+                                    <div style="margin-top: 8px;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                            <span style="font-size: 0.75rem; font-weight: 800; color: var(--text-light);">TIẾN TRÌNH</span>
+                                            <span style="font-size: 0.75rem; font-weight: 800; color: var(--text-main);">${streakPercent}%</span>
+                                        </div>
+                                        <div style="height: 6px; background: var(--border-color); border-radius: 10px; overflow: hidden;">
+                                            <div style="width: ${streakPercent}%; height: 100%; background: var(--success); border-radius: 10px; box-shadow: 0 0 10px rgba(0, 184, 148, 0.3);"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('') : `<div style="flex: 1; padding: 60px; text-align: center; border: 2px dashed var(--border-color); border-radius: 24px; color: var(--text-light);">
+                            <p style="font-weight: 700;">Bạn chưa có thói quen nào.</p>
+                        </div>`}
+                    </div>
+                </div>
 
                 <!-- Bottom Row: Productivity Chart (Stat representation) -->
                 <div class="dashboard-section-card" style="background: var(--card-bg); border-radius: 28px; border: 1.5px solid var(--border-color); box-shadow: var(--shadow-md); padding: 24px;">

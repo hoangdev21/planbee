@@ -14,86 +14,61 @@ export const renderTopbar = (container) => {
     ];
 
     container.innerHTML = `
-        <div class="topbar-wrapper" style="width: 100%; display: flex; align-items: center; justify-content: space-between; height: 100%; padding: 0 var(--spacing-lg);">
-            <div class="topbar-left" style="display: flex; align-items: center;">
-                <button id="mobile-menu-btn" class="mobile-menu-btn">
-                    <i class="fas fa-bars"></i>
+        <div class="topbar-wrapper" style="width: 100%; display: flex; align-items: center; justify-content: space-between; height: 100%; padding: 0 16px;">
+            <div class="topbar-left" style="display: flex; align-items: center; gap: 12px;">
+                <button id="mobile-menu-btn" class="mobile-menu-btn-minimal">
+                    <i class="fas fa-bars-staggered"></i>
                 </button>
-                <h3 id="page-title" style="font-size: 1.4rem; font-weight: 800; color: var(--text-main); margin: 0; letter-spacing: -0.5px;">Tổng quan</h3>
+                <h3 id="page-title" style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin: 0; letter-spacing: -0.3px;">Tổng quan</h3>
             </div>
             
-            <div class="topbar-right" style="display: flex; align-items: center; gap: var(--spacing-md);">
-                <!-- Search Box -->
-                <div class="search-container" style="position: relative;">
-                    <div class="search-box" style="position: relative; transition: all 0.3s ease;">
-                        <i class="fas fa-search" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-light); z-index: 10;"></i>
-                        <input type="text" id="global-search" placeholder="Tìm kiếm nhiệm vụ, kế hoạch..." 
-                            style="padding: 12px 16px 12px 42px; border-radius: 12px; border: 1.5px solid var(--border-color); background: var(--input-bg); width: 320px; outline: none; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); font-weight: 500; font-size: 0.9rem;">
-                    </div>
-                    <!-- Search Results Dropdown -->
-                    <div id="search-results" class="search-dropdown" style="display: none; position: absolute; top: calc(100% + 12px); left: 0; width: 400px; background: white; border-radius: 16px; border: 1px solid var(--border-color); box-shadow: 0 15px 40px rgba(0,0,0,0.12); z-index: 1000; overflow: hidden; animation: slideDown 0.3s ease;">
-                        <div style="padding: 12px 16px; border-bottom: 1px solid var(--border-color); background: #f8f9fa;">
-                            <span style="font-size: 0.8rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Kết quả tìm kiếm</span>
-                        </div>
-                        <div id="search-items-list" style="max-height: 400px; overflow-y: auto;">
-                            <!-- Items will be injected here -->
-                        </div>
-                    </div>
+            <div class="topbar-right" style="display: flex; align-items: center; gap: 8px;">
+                <!-- Search Box (Minimalist) -->
+                <div class="search-container" style="position: relative; margin-right: 8px;">
+                    <input type="text" id="global-search" placeholder="Tìm kiếm..." 
+                        style="padding: 8px 12px 8px 36px; border-radius: 10px; border: 1px solid var(--border-color); background: var(--input-bg); width: 220px; outline: none; transition: all 0.3s; font-size: 0.85rem; font-weight: 600;">
+                    <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-light); font-size: 0.8rem;"></i>
                 </div>
 
-                <!-- Theme Toggle -->
-                <button id="theme-toggle" class="topbar-icon-btn" title="Chuyển chế độ">
-                    <i class="fas ${theme === 'light' ? 'fa-moon' : 'fa-sun'}"></i>
-                </button>
-
-                <!-- Notifications -->
-                <div class="notification-container" style="position: relative;">
-                    <button id="notification-btn" class="topbar-icon-btn" style="position: relative;">
-                        <i class="fas fa-bell"></i>
-                        <span class="notification-badge"></span>
+                <!-- Action Group -->
+                <div style="display: flex; align-items: center; gap: 6px; padding: 4px; background: rgba(0,0,0,0.02); border-radius: 12px;">
+                    <button id="theme-toggle" class="topbar-icon-btn-minimal" title="Chế độ">
+                        <i class="fas ${theme === 'light' ? 'fa-moon' : 'fa-sun'}"></i>
                     </button>
-                    <!-- Notification Dropdown -->
-                    <div class="notification-dropdown">
-                        <div class="dropdown-header">
-                            <span style="font-weight: 800;">Thông báo</span>
-                            <span style="font-size: 0.75rem; color: var(--primary-color); cursor: pointer;">Đánh dấu đã đọc</span>
-                        </div>
-                        <div class="notification-list">
-                            ${notifications.map(noti => `
-                                <div class="notification-item">
-                                    <div class="noti-icon" style="background: ${noti.color}15; color: ${noti.color};">
-                                        <i class="fas ${noti.icon}"></i>
-                                    </div>
-                                    <div class="noti-content">
-                                        <div class="noti-title">${noti.title}</div>
-                                        <div class="noti-message">${noti.message}</div>
-                                        <div class="noti-time">${noti.time}</div>
-                                    </div>
-                                </div>
-                            `).join('')}
-                        </div>
-                        <div class="dropdown-footer">
-                            Xem tất cả thông báo
+
+                    <div class="notification-container" style="position: relative;">
+                        <button id="notification-btn" class="topbar-icon-btn-minimal">
+                            <i class="fas fa-bell"></i>
+                            <span class="notification-badge-minimal" style="display: none;"></span>
+                        </button>
+                        <!-- Notification Dropdown -->
+                        <div id="notification-dropdown" class="notification-dropdown">
+                            <div class="dropdown-header">
+                                <span style="font-weight: 800;">Thông báo</span>
+                                <span id="mark-read-all" style="font-size: 0.75rem; color: var(--primary-color); cursor: pointer;">Đánh dấu đã đọc</span>
+                            </div>
+                            <div class="notification-list">
+                                <!-- Real notifications injected here -->
+                            </div>
+                            <div class="dropdown-footer" id="view-all-notifications">
+                                Xem tất cả thông báo
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- User Profile -->
-                <div class="user-profile-wrapper" style="position: relative;">
-                    <div id="user-profile" class="user-profile-card">
-                        <div class="user-avatar">
+                <!-- User Profile (Compact) -->
+                <div class="user-profile-wrapper" style="position: relative; margin-left: 4px;">
+                    <div id="user-profile" class="user-profile-compact">
+                        <div class="user-avatar-mini">
                             <img src="/bee.png" alt="Avatar">
                         </div>
-                        <div class="user-meta" style="display: flex; flex-direction: column;">
-                            <span class="user-name">${userName}</span>
-                            <span class="user-role">${userRole}</span>
-                        </div>
-                        <i class="fas fa-chevron-down" style="font-size: 0.7rem; color: var(--text-muted); margin-left: 8px; transition: transform 0.3s;"></i>
+                        <i class="fas fa-chevron-down" style="font-size: 0.6rem; color: var(--text-muted); opacity: 0.5;"></i>
                     </div>
-                    <!-- User Dropdown (Optional but professional) -->
+                    <!-- User Dropdown Menu -->
                     <div id="user-dropdown" class="user-dropdown-menu">
                         <div style="padding: 16px; border-bottom: 1px solid var(--border-color);">
-                            <div style="font-weight: 800; color: var(--text-main);">${userName}</div>
+                            <div style="font-weight: 800; color: var(--text-main);" id="dropdown-user-name">${userName}</div>
                             <div style="font-size: 0.8rem; color: var(--text-muted);">${user.email || 'user@planbee.com'}</div>
                         </div>
                         <a href="#/settings" class="dropdown-link"><i class="fas fa-user-gear"></i> Tài khoản</a>
@@ -109,115 +84,68 @@ export const renderTopbar = (container) => {
         </div>
 
         <style>
-            .topbar-icon-btn {
-                padding: 12px;
-                border-radius: 14px;
-                border: 1.5px solid var(--border-color);
-                color: var(--text-main);
-                font-size: 1.1rem;
-                line-height: 1;
-                background: var(--card-bg);
-                cursor: pointer;
-                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                display: flex;
-                align-items: center;
-                justify-content: center;
+            .mobile-menu-btn-minimal {
+                width: 36px; height: 36px; border-radius: 10px; border: none;
+                background: #f1f2f6; color: var(--text-main); cursor: pointer;
+                display: flex; align-items: center; justify-content: center;
             }
-            .topbar-icon-btn:hover {
-                border-color: var(--primary-color);
-                color: var(--primary-color);
-                transform: translateY(-2px);
-                background: var(--primary-light);
-                box-shadow: 0 4px 12px rgba(255,167,38,0.1);
+
+            .topbar-icon-btn-minimal {
+                width: 34px; height: 34px; border-radius: 8px; border: none;
+                background: transparent; color: var(--text-main); cursor: pointer;
+                display: flex; align-items: center; justify-content: center;
+                transition: all 0.2s; font-size: 1rem; position: relative;
             }
+            .topbar-icon-btn-minimal:hover { background: white; box-shadow: var(--shadow-sm); color: var(--primary-color); }
+
+            .notification-badge-minimal {
+                position: absolute; top: -2px; right: -4px; 
+                background: #ff4757; color: white; border-radius: 50%; 
+                border: 2px solid white; box-shadow: 0 2px 6px rgba(255, 71, 87, 0.3);
+                font-size: 0.62rem; font-weight: 800;
+                min-width: 18px; height: 18px;
+                display: flex; align-items: center; justify-content: center;
+                padding: 0 4px; z-index: 10;
+            }
+
+            .user-profile-compact {
+                display: flex; align-items: center; gap: 6px; cursor: pointer;
+                padding: 2px; border-radius: 50px; transition: all 0.2s;
+            }
+            .user-profile-compact:hover { background: rgba(0,0,0,0.03); }
             
-            .notification-badge {
-                position: absolute;
-                top: -6px;
-                right: -6px;
-                background: #ff4757;
-                color: white;
-                font-size: 0.65rem;
-                font-weight: 800;
-                width: 18px;
-                height: 18px;
-                border-radius: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                border: 2px solid white;
-                box-shadow: 0 2px 8px rgba(255, 71, 87, 0.3);
-                z-index: 10;
+            .user-avatar-mini {
+                width: 32px; height: 32px; border-radius: 50%; border: 1.5px solid var(--primary-color);
+                background: white; overflow: hidden; display: flex; align-items: center; justify-content: center;
             }
+            .user-avatar-mini img { width: 70%; height: 70%; object-fit: contain; }
 
-            .user-profile-card {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                cursor: pointer;
-                padding: 6px 14px;
-                border-radius: 14px;
-                border: 1.5px solid var(--border-color);
-                background: var(--card-bg);
-                transition: all 0.3s ease;
+            /* Dropdowns */
+            .notification-dropdown, .user-dropdown-menu {
+                position: absolute; top: calc(100% + 10px); right: 0; 
+                background: var(--card-bg); border-radius: 16px; border: 1px solid var(--border-color);
+                box-shadow: 0 10px 40px rgba(0,0,0,0.1); z-index: 1000; display: none;
+                overflow: hidden; animation: slideInTop 0.2s ease-out;
             }
-            .user-profile-card:hover {
-                border-color: var(--primary-color);
-                box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-            }
-            .user-avatar {
-                width: 40px;
-                height: 40px;
-                border-radius: 50%;
-                background: white;
-                border: 2px solid var(--primary-color);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                overflow: hidden;
-                box-shadow: 0 4px 10px rgba(255,167,38,0.2);
-            }
-            .user-avatar img {
-                width: 75%;
-                height: 75%;
-                object-fit: contain;
-            }
-            .user-name {
-                font-size: 0.9rem;
-                font-weight: 800;
-                line-height: 1.2;
-                color: var(--text-main);
-            }
-            .user-role {
-                font-size: 0.7rem;
-                color: var(--text-muted);
-                font-weight: 600;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-            }
+            .notification-dropdown { width: 320px; }
+            .user-dropdown-menu { width: 220px; }
+            
+            .notification-dropdown.active, .user-dropdown-menu.active { display: block; }
 
-            /* Notification Dropdown */
-            .notification-container:hover .notification-dropdown {
-                opacity: 1;
-                visibility: visible;
-                transform: translateY(0);
-            }
-            .notification-dropdown {
-                position: absolute;
-                top: calc(100% + 12px);
-                right: 0;
-                width: 350px;
-                background: white;
-                border-radius: 20px;
-                border: 1px solid var(--border-color);
-                box-shadow: 0 15px 40px rgba(0,0,0,0.15);
-                z-index: 1000;
-                opacity: 0;
-                visibility: hidden;
-                transform: translateY(10px);
-                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                overflow: hidden;
-            }
+            @keyframes slideInTop { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+            .dropdown-header { padding: 16px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+            .notification-list { max-height: 380px; overflow-y: auto; }
+            .notification-item { display: flex; gap: 12px; padding: 12px 16px; border-bottom: 1px solid rgba(0,0,0,0.03); cursor: pointer; transition: background 0.2s; }
+            .notification-item:hover { background: rgba(0,0,0,0.02); }
+            .noti-icon { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1rem; }
+            .noti-content { display: flex; flex-direction: column; gap: 3px; overflow: hidden; }
+            .noti-title { font-weight: 700; font-size: 0.85rem; color: var(--text-main); }
+            .noti-time { font-size: 0.7rem; color: var(--text-light); }
+            .dropdown-footer { padding: 12px; text-align: center; font-size: 0.8rem; font-weight: 800; color: var(--primary-color); background: rgba(0,0,0,0.01); cursor: pointer; }
+            .dropdown-link { display: flex; align-items: center; gap: 10px; padding: 10px 16px; color: var(--text-main); text-decoration: none; font-size: 0.9rem; font-weight: 600; }
+            .dropdown-link:hover { background: rgba(0,0,0,0.03); color: var(--primary-color); }
+            .dropdown-link i { width: 16px; opacity: 0.6; }
             .dropdown-header {
                 padding: 16px 20px;
                 border-bottom: 1px solid var(--border-color);
@@ -403,7 +331,7 @@ export const renderTopbar = (container) => {
 
     // Close search on click outside
     document.addEventListener('click', (e) => {
-        if (!searchInput.contains(e.target) && !searchDropdown.contains(e.target)) {
+        if (searchInput && searchDropdown && !searchInput.contains(e.target) && !searchDropdown.contains(e.target)) {
             searchDropdown.style.display = 'none';
         }
     });
@@ -411,7 +339,7 @@ export const renderTopbar = (container) => {
     // Fetch real notifications
     const notificationContainer = container.querySelector('.notification-container');
     const notificationList = container.querySelector('.notification-list');
-    const notificationBadge = container.querySelector('.notification-badge');
+    const notificationBadge = container.querySelector('.notification-badge-minimal');
     
     // Polling and Notification API Support
     let lastUnreadCount = 0;
@@ -532,15 +460,47 @@ export const renderTopbar = (container) => {
         };
     }
 
-    // 5. Mobile Menu Toggle Logic
+    // 5. Dropdown Toggle Logic (Click-based for mobile/reliability)
+    const notiBtn = document.getElementById('notification-btn');
+    const notiDropdown = document.getElementById('notification-dropdown');
+    const userProfile = document.getElementById('user-profile');
+    const userDropdown = document.getElementById('user-dropdown');
+
+    if (notiBtn && notiDropdown) {
+        notiBtn.onclick = (e) => {
+            e.stopPropagation();
+            notiDropdown.classList.toggle('active');
+            if (userDropdown) userDropdown.classList.remove('active');
+        };
+    }
+
+    if (userProfile && userDropdown) {
+        userProfile.onclick = (e) => {
+            e.stopPropagation();
+            userDropdown.classList.toggle('active');
+            if (notiDropdown) notiDropdown.classList.remove('active');
+        };
+    }
+
+    // Close on click outside
+    document.addEventListener('click', (e) => {
+        if (notiDropdown && !notiBtn.contains(e.target) && !notiDropdown.contains(e.target)) {
+            notiDropdown.classList.remove('active');
+        }
+        if (userDropdown && !userProfile.contains(e.target) && !userDropdown.contains(e.target)) {
+            userDropdown.classList.remove('active');
+        }
+    });
+
+    // 6. Mobile Menu Toggle Logic
     const mobileMenuBtn = document.getElementById('mobile-menu-btn');
     const sidebar = document.getElementById('sidebar');
     const drawerOverlay = document.getElementById('drawer-overlay');
 
     if (mobileMenuBtn) {
         mobileMenuBtn.onclick = () => {
-            sidebar.classList.add('active');
-            drawerOverlay.classList.add('active');
+            if (sidebar) sidebar.classList.add('active');
+            if (drawerOverlay) drawerOverlay.classList.add('active');
         };
     }
 };

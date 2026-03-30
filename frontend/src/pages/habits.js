@@ -4,77 +4,81 @@ let allHabits = [];
 let currentFilters = { search: '', status: 'all', frequency: 'all' };
 
 export const renderHabits = async (container) => {
-    container.innerHTML = `<div style="padding: 40px; text-align: center; color: var(--text-muted);">Khám phá lộ trình phát triển...</div>`;
+    container.innerHTML = `<div style="padding: 40px; text-align: center; color: var(--text-muted);"><div class="loading-spinner"></div> Đang tải kỷ luật...</div>`;
 
     try {
         const response = await api.get('/habits/all');
         allHabits = response.habits;
         updateHabitsUI(container);
     } catch (error) {
-        container.innerHTML = `<div style="padding: 40px; text-align: center; color: var(--danger);">Lỗi: ${error.message}</div>`;
+        container.innerHTML = `<div style="padding: 40px; text-align: center; color: var(--danger);">Lỗi hệ thống: ${error.message}</div>`;
     }
 };
 
 const updateHabitsUI = (container) => {
+    const today = new Date().toISOString().slice(0, 10);
     const filtered = allHabits.filter(h => {
         const matchesSearch = h.title.toLowerCase().includes(currentFilters.search.toLowerCase());
-        const today = new Date().toISOString().slice(0, 10);
         const isDone = h.last_completed && h.last_completed.startsWith(today);
         const matchesStatus = currentFilters.status === 'all' || (currentFilters.status === 'done' ? isDone : !isDone);
-        const matchesFreq = currentFilters.frequency === 'all' || h.frequency === currentFilters.frequency;
-        return matchesSearch && matchesStatus && matchesFreq;
+        return matchesSearch && matchesStatus;
     });
 
-    const today = new Date().toISOString().slice(0, 10);
     const completedCount = allHabits.filter(h => h.last_completed && h.last_completed.startsWith(today)).length;
     const progressPercent = allHabits.length > 0 ? Math.round((completedCount / allHabits.length) * 100) : 0;
 
     container.innerHTML = `
-        <div class="habits-premium-root fade-in">
-            <!-- Header & Dashboard Stats -->
-            <div class="habits-header-premium">
-                <div class="header-left">
-                    <h2 class="title-gradient">Kỷ luật tự thân</h2>
-                    <p>Xây dựng thói quen nhỏ, tạo thành công lớn.</p>
+        <div class="habits-premium-container fade-in">
+            <!-- Elite Dashboard Header -->
+            <div class="habits-elite-dashboard">
+                <div class="dashboard-top-info">
+                    <div class="title-group">
+                        <h2 class="elite-title">Kỷ luật tự thân</h2>
+                        <p class="elite-subtitle">Chinh phục 1% mỗi ngày cùng PlanBee.</p>
+                    </div>
                 </div>
-                <div class="habits-stats-mini">
-                    <div class="stat-item">
-                        <span class="stat-value">${completedCount}/${allHabits.length}</span>
-                        <span class="stat-label">Hoàn thành hôm nay</span>
+
+                <div class="stats-master-card">
+                    <div class="stats-main-flow">
+                        <div class="stat-unit">
+                            <div class="stat-icon-bg"><i class="fas fa-check-circle"></i></div>
+                            <div class="stat-content">
+                                <span class="val">${completedCount}<span>/${allHabits.length}</span></span>
+                                <span class="lbl">HÔM NAY</span>
+                            </div>
+                        </div>
+                        <div class="stat-divider"></div>
+                        <div class="stat-unit progress-unit">
+                            <div class="progress-ring-container">
+                                <svg class="ring-svg" viewBox="0 0 40 40">
+                                    <circle class="ring-bg" cx="20" cy="20" r="18" fill="none" stroke="var(--border-color)" stroke-width="3"></circle>
+                                    <circle class="ring-fg" cx="20" cy="20" r="18" fill="none" stroke="var(--primary-color)" stroke-width="3" stroke-linecap="round" style="stroke-dasharray: 113; stroke-dashoffset: ${113 - (113 * progressPercent) / 100}"></circle>
+                                </svg>
+                                <span class="ring-percent">${progressPercent}%</span>
+                            </div>
+                        </div>
                     </div>
-                    <div class="stat-progress-ring">
-                        <div class="progress-bar-inner" style="width: ${progressPercent}%;"></div>
-                        <span class="progress-text">${progressPercent}%</span>
-                    </div>
-                    <button id="show-habit-modal" class="btn-create-premium">
-                        <i class="fas fa-plus-circle"></i> Tạo mới
+                    <button id="show-habit-modal" class="btn-create-master">
+                        <i class="fas fa-plus-circle"></i> THIẾT LẬP
                     </button>
                 </div>
             </div>
 
-            <!-- Professional Filter Bar -->
-            <div class="filter-bar-premium">
-                <div class="search-box">
-                    <i class="fas fa-search"></i>
-                    <input type="text" id="habit-search" placeholder="Tìm thói quen..." value="${currentFilters.search}">
+            <!-- Navigator Bar (Tabs & Search) -->
+            <div class="habit-navigator-bar">
+                <div class="pills-container">
+                    ${['all', 'incomplete', 'done'].map(st => {
+                        const labels = { all: 'Tất cả', incomplete: 'Đang tập', done: 'Đạt mục tiêu' };
+                        return `
+                            <button class="pill-btn ${currentFilters.status === st ? 'active' : ''}" data-status="${st}">
+                                ${labels[st]}
+                            </button>
+                        `;
+                    }).join('')}
                 </div>
-                <div class="filter-groups">
-                    <div class="filter-group">
-                        <label>Trạng thái</label>
-                        <select id="filter-status">
-                            <option value="all" ${currentFilters.status === 'all' ? 'selected' : ''}>Tất cả</option>
-                            <option value="incomplete" ${currentFilters.status === 'incomplete' ? 'selected' : ''}>Chưa xong</option>
-                            <option value="done" ${currentFilters.status === 'done' ? 'selected' : ''}>Đã xong</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label>Tần suất</label>
-                        <select id="filter-freq">
-                            <option value="all" ${currentFilters.frequency === 'all' ? 'selected' : ''}>Tất cả</option>
-                            <option value="daily" ${currentFilters.frequency === 'daily' ? 'selected' : ''}>Hàng ngày</option>
-                            <option value="weekly" ${currentFilters.frequency === 'weekly' ? 'selected' : ''}>Hàng tuần</option>
-                        </select>
-                    </div>
+                <div class="search-master-wrap">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="habit-search" placeholder="Tìm kỷ luật..." value="${currentFilters.search}">
                 </div>
             </div>
 
@@ -83,109 +87,104 @@ const updateHabitsUI = (container) => {
                 <div class="habits-grid-premium">
                     ${filtered.map(habit => {
                         const isDone = habit.last_completed && habit.last_completed.startsWith(today);
+                        const streak = habit.current_streak || 0;
                         
                         return `
-                            <div class="habit-card-ultra premium ${isDone ? 'is-done' : ''}">
-                                <div class="card-header">
-                                    <div class="habit-icon-box" style="background: transparent !important;">
-                                        <img src="${isDone ? '/complete.png' : (habit.frequency === 'daily' ? '/lightning.png' : '/thunder.png')}" class="habit-icon-img" alt="habit-icon">
-                                    </div>
-                                    <h4 class="habit-title">${habit.title}</h4>
-                                    <!-- Mini Edit icon could go here if needed -->
-                                </div>
-
-                                <div class="card-meta-vertical">
-                                    <div class="meta-row">
-                                        <i class="far fa-clock"></i>
-                                        <span class="meta-label">Thời gian:</span>
-                                        <span class="meta-value">${habit.preferred_time ? habit.preferred_time.slice(0, 5) : 'Any'}</span>
-                                    </div>
-                                    <div class="meta-row">
-                                        <i class="fas fa-sync-alt"></i>
-                                        <span class="meta-label">Tần suất:</span>
-                                        <span class="meta-value">${habit.frequency === 'daily' ? 'Hàng ngày' : 'Hàng tuần'}</span>
-                                    </div>
-                                    <div class="meta-row streak-highlight">
-                                        <i class="fas fa-fire"></i>
-                                        <span class="meta-label">Chuỗi:</span>
-                                        <span class="meta-value">${habit.current_streak} ngày</span>
-                                    </div>
-                                </div>
-
-                                <div class="card-progress-section">
-                                    <div class="progress-track">
-                                        ${Array(14).fill(0).map((_, i) => `
-                                            <div class="progress-dot ${i < habit.current_streak % 14 ? 'active' : ''}" style="opacity: ${0.4 + (i * 0.05)};"></div>
-                                        `).join('')}
-                                    </div>
-                                </div>
-                                
-                                <p class="card-desc">${habit.description || 'Hành động nhỏ mỗi ngày giúp bạn tiến xa hơn.'}</p>
-                                
-                                <div class="card-actions-group">
-                                    ${!isDone ? `
-                                        <button class="btn-action-delete" data-id="${habit.id}" title="Xóa thói quen">
-                                            <i class="fas fa-trash-alt"></i> Xóa
-                                        </button>
-                                        <button class="btn-action-checkin" data-id="${habit.id}">
-                                            <i class="fas fa-fingerprint"></i>
-                                        </button>
-                                        <button class="btn-action-complete" data-id="${habit.id}">
-                                            Xong
-                                        </button>
-                                    ` : `
-                                        <div class="done-badge-full">
-                                            <i class="fas fa-check-circle"></i> Đã điểm danh!
+                            <div class="habit-card-elite ${isDone ? 'is-completed' : ''}">
+                                <div class="card-inner">
+                                    <div class="card-top">
+                                        <div class="habit-icon-wrap">
+                                            <div class="icon-sphere">
+                                                <img src="${isDone ? '/complete.png' : (habit.frequency === 'daily' ? '/lightning.png' : '/thunder.png')}" alt="icon">
+                                            </div>
+                                            ${streak > 0 ? `<div class="streak-tag"><i class="fas fa-fire"></i> ${streak}</div>` : ''}
                                         </div>
-                                        <button class="btn-action-complete-secondary" data-id="${habit.id}" title="Hoàn thành thói quen vĩnh viễn">
-                                            Xong
-                                        </button>
-                                    `}
+                                        <div class="habit-main-data">
+                                            <h4 class="habit-title">${habit.title}</h4>
+                                            <div class="habit-badges">
+                                                <span class="badge freq-badge">${habit.frequency === 'daily' ? 'Hàng ngày' : 'Hàng tuần'}</span>
+                                                <span class="badge time-badge"><i class="far fa-clock"></i> ${habit.preferred_time ? habit.preferred_time.slice(0, 5) : 'Bất kỳ'}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="habit-desc-minimal">
+                                        ${habit.description || 'Duy trì kỷ luật nhỏ mỗi ngày sẽ tạo nên sự thay đổi vĩ đại.'}
+                                    </div>
+
+                                    <div class="habit-progress-viz">
+                                        <div class="viz-dots">
+                                            ${Array(7).fill(0).map((_, i) => `<div class="viz-dot ${i < (streak % 7 || (isDone ? 7 : 0)) ? 'active' : ''}"></div>`).join('')}
+                                        </div>
+                                        <div class="viz-label">${isDone ? 'Đạt' : 'Đang tập'}</div>
+                                    </div>
+
+                                    <div class="habit-card-footer">
+                                        ${!isDone ? `
+                                            <button class="btn-action-checkin checkin-btn" data-id="${habit.id}">
+                                                <i class="fas fa-check-double"></i> ĐIỂM DANH
+                                            </button>
+                                            <button class="btn-action-delete delete-btn" data-id="${habit.id}">
+                                                <i class="far fa-trash-alt"></i>
+                                            </button>
+                                        ` : `
+                                            <div class="done-ribbon">
+                                                <i class="fas fa-award"></i> THÀNH CÔNG
+                                            </div>
+                                            <button class="btn-action-delete delete-btn" data-id="${habit.id}">
+                                                <i class="far fa-trash-alt"></i>
+                                            </button>
+                                        `}
+                                    </div>
                                 </div>
                             </div>
                         `;
                     }).join('')}
                 </div>
             ` : `
-                <div class="empty-state-premium">
-                    <img src="https://cdni.iconscout.com/illustration/premium/thumb/empty-state-2130362-1800592.png" style="width: 200px; opacity: 0.8; filter: grayscale(1);">
-                    <h3>Không tìm thấy thói quen</h3>
-                    <p>Hãy thử thay đổi bộ lọc hoặc tạo lộ trình mới.</p>
+                <div class="empty-state-illust">
+                    <img src="/bee.png" style="width: 100px; opacity: 0.2;">
+                    <p>Chuỗi kỷ luật đang chờ bạn...</p>
                 </div>
             `}
 
-            <!-- Modal redesigned -->
+            <!-- Designer Modal -->
             <div id="habit-modal" class="modal-overlay" style="display: none;">
-                <div class="modal-content-ultra">
-                    <div class="modal-header">
-                        <h3>Thiết lập thói quen</h3>
-                        <p>Xây dựng lộ trình phát triển bền vững cùng PlanBee</p>
-                    </div>
-                    <form id="habit-form">
-                        <div class="form-group">
-                            <label><i class="fas fa-tag"></i> Tên thói quen</label>
-                            <input type="text" name="title" placeholder="Ví dụ: Thiền định, Đọc sách 30p..." required>
+                <div class="modal-elite-designer">
+                    <div class="modal-header-banner">
+                        <div class="banner-icon"><i class="fas fa-magic"></i></div>
+                        <div class="banner-text">
+                            <h3>Thiết lập Kỷ luật</h3>
+                            <p>Thay đổi hành vi, kiến tạo tương lai.</p>
                         </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label><i class="fas fa-clock"></i> Giờ thực hiện</label>
+                        <button id="close-modal-x" class="modal-x-btn"><i class="fas fa-times"></i></button>
+                    </div>
+
+                    <form id="habit-form" class="elite-form">
+                        <div class="field-group">
+                            <label><i class="fas fa-signature"></i> Tên thói quen</label>
+                            <input type="text" name="title" placeholder="Ví dụ: Đọc sách, Chạy bộ..." required>
+                        </div>
+                        <div class="field-group">
+                            <label><i class="fas fa-quote-left"></i> Ghi chú & Động lực</label>
+                            <textarea name="description" placeholder="Tại sao bạn làm điều này?" rows="2"></textarea>
+                        </div>
+                        <div class="field-row">
+                            <div class="field-group">
+                                <label><i class="far fa-clock"></i> Thời gian</label>
                                 <input type="time" name="preferred_time">
                             </div>
-                            <div class="form-group">
-                                <label><i class="fas fa-sync-alt"></i> Tần suất</label>
+                            <div class="field-group">
+                                <label><i class="fas fa-calendar-check"></i> Tần suất</label>
                                 <select name="frequency">
                                     <option value="daily">Hàng ngày</option>
                                     <option value="weekly">Hàng tuần</option>
                                 </select>
                             </div>
                         </div>
-                        <div class="form-group">
-                            <label><i class="fas fa-quote-left"></i> Mô tả & Động lực</label>
-                            <textarea name="description" rows="3" placeholder="Lý do bạn bắt đầu thói quen này là gì? Trình bày ngắn gọn nhé..."></textarea>
-                        </div>
-                        <div class="modal-actions">
-                            <button type="button" id="close-h-modal" class="btn btn-ghost">Hủy bỏ</button>
-                            <button type="submit" class="btn btn-primary-premium">Kích hoạt ngay</button>
+                        <div class="modal-footer-actions">
+                            <button type="button" id="close-h-modal" class="btn-cancel-elite">Hủy bỏ</button>
+                            <button type="submit" class="btn-submit-elite">KÍCH HOẠT</button>
                         </div>
                     </form>
                 </div>
@@ -193,152 +192,122 @@ const updateHabitsUI = (container) => {
         </div>
 
         <style>
-            .habits-premium-root { padding: 40px; display: flex; flex-direction: column; gap: 40px; }
-            .habits-header-premium { display: flex; justify-content: space-between; align-items: center; }
-            .title-gradient { font-size: 2.2rem; font-weight: 900; background: linear-gradient(135deg, var(--text-main), var(--primary-color)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-            .header-left p { color: var(--text-muted); font-size: 1.1rem; }
+            .habits-premium-container { padding: 16px; box-sizing: border-box; min-height: 100vh; max-width: 1400px; margin: 0 auto; }
             
-            .habits-stats-mini { display: flex; align-items: center; gap: 32px; background: var(--card-bg); padding: 16px 32px; border-radius: 20px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-color); }
-            .stat-item { display: flex; flex-direction: column; }
-            .stat-value { font-size: 1.4rem; font-weight: 800; color: var(--text-main); }
-            .stat-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; }
-            
-            .stat-progress-ring { position: relative; width: 60px; height: 10px; background: rgba(0,0,0,0.05); border-radius: 10px; overflow: hidden; }
-            .progress-bar-inner { height: 100%; background: var(--primary-color); border-radius: 10px; transition: 0.5s; }
-            
-            .btn-create-premium { background: var(--primary-color); color: white; padding: 12px 24px; border-radius: 12px; font-weight: 800; border: none; cursor: pointer; transition: 0.3s; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(255, 167, 38, 0.3); }
-            .btn-create-premium:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(255, 167, 38, 0.4); }
+            /* Elite Dashboard Header */
+            .habits-elite-dashboard { margin-bottom: 32px; display: flex; flex-direction: column; gap: 20px; }
+            .elite-title { font-size: 1.8rem; font-weight: 900; color: var(--text-main); margin-bottom: 4px; letter-spacing: -0.5px; }
+            .elite-subtitle { color: var(--text-muted); font-weight: 600; font-size: 0.9rem; opacity: 0.8; }
 
-            /* Filter Bar */
-            .filter-bar-premium { display: flex; justify-content: space-between; align-items: center; background: var(--card-bg); padding: 20px; border-radius: 20px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); }
-            .search-box { flex: 1; max-width: 400px; position: relative; }
-            .search-box i { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
-            .search-box input { width: 100%; padding: 12px 16px 12px 48px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-main); font-family: inherit; }
-            
-            .filter-groups { display: flex; gap: 24px; }
-            .filter-group { display: flex; flex-direction: column; gap: 4px; }
-            .filter-group label { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; color: var(--text-muted); margin-left: 4px; }
-            .filter-group select { padding: 10px 16px; border-radius: 10px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-main); font-weight: 600; cursor: pointer; }
-
-            /* Habits Grid */
-            .habits-grid-premium { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 24px; }
-
-            /* Ultra Card Redesign */
-            .habit-card-ultra { padding: 24px; background: var(--card-bg); border-radius: 24px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); position: relative; display: flex; flex-direction: column; gap: 20px; }
-            .habit-card-ultra:hover { transform: translateY(-10px) scale(1.02); box-shadow: var(--shadow-lg); border-color: var(--primary-color); }
-            
-            .card-header { display: flex; align-items: center; gap: 16px; position: relative; }
-            .habit-icon-box { width: 54px; height: 54px; display: flex; align-items: center; justify-content: center; }
-            .habit-icon-img { 
-                width: 42px; height: 42px; object-fit: contain; 
-                filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1));
-                transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            .stats-master-card { 
+                background: var(--card-bg); border-radius: 28px; padding: 24px; 
+                border: 1.5px solid var(--border-color); display: flex; flex-direction: column; gap: 20px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.04); position: relative; overflow: hidden;
             }
-            .habit-card-ultra:hover .habit-icon-img { transform: scale(1.2) rotate(3deg); }
-            .habit-title { font-size: 1.15rem; font-weight: 800; color: var(--text-main); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-            .delete-btn-mini { background: none; border: none; font-size: 1.2rem; color: var(--text-light); opacity: 0.4; cursor: pointer; transition: 0.2s; }
-            .delete-btn-mini:hover { color: var(--danger); opacity: 1; }
+            .stats-main-flow { display: flex; align-items: center; justify-content: space-around; width: 100%; }
+            .stat-unit { display: flex; align-items: center; gap: 12px; }
+            .stat-icon-bg { width: 44px; height: 44px; border-radius: 12px; background: rgba(255, 167, 38, 0.1); color: var(--primary-color); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+            .stat-content { display: flex; flex-direction: column; }
+            .stat-content .val { font-size: 1.6rem; font-weight: 900; color: var(--text-main); line-height: 1; }
+            .stat-content .val span { font-size: 1rem; color: var(--text-light); }
+            .stat-content .lbl { font-size: 0.65rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
+            .stat-divider { width: 1.5px; height: 40px; background: var(--border-color); opacity: 0.5; }
 
-            .card-meta-vertical { display: flex; flex-direction: column; gap: 10px; padding: 12px; background: rgba(0,0,0,0.02); border-radius: 16px; }
-            .meta-row { display: flex; align-items: center; gap: 12px; font-size: 0.85rem; }
-            .meta-row i { width: 16px; color: var(--primary-color); }
-            .meta-label { color: var(--text-muted); font-weight: 600; width: 80px; }
-            .meta-value { color: var(--text-main); font-weight: 800; }
-            .streak-highlight .meta-value { color: #ff6b6b; }
+            .progress-ring-container { position: relative; width: 50px; height: 50px; }
+            .ring-svg { transform: rotate(-90deg); width: 100%; height: 100%; }
+            .ring-percent { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 0.7rem; font-weight: 900; color: var(--text-main); }
 
-            .card-progress-section { display: flex; flex-direction: column; gap: 8px; }
-            .progress-track { display: flex; gap: 4px; }
-            .progress-dot { flex: 1; height: 10px; border-radius: 10px; background: rgba(0,0,0,0.05); }
-            .progress-dot.active { background: var(--success); box-shadow: 0 0 10px rgba(30, 215, 96, 0.2); }
-
-            .card-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; height: 3em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-            
-            .card-actions-group { display: flex; gap: 8px; margin-top: auto; align-items: stretch; justify-content: space-between; width: 100%; }
-            
-            .btn-action-delete, .btn-action-checkin, .btn-action-complete { flex: 1; padding: 12px 6px; border-radius: 12px; font-weight: 800; cursor: pointer; transition: 0.3s; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border: none; }
-            
-            .btn-action-delete { border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-light); }
-            .btn-action-delete:hover { background: #fee2e2; color: #ef4444; border-color: #fecaca; }
-
-            .btn-action-checkin { background: rgba(0,0,0,0.02); color: var(--text-main); border: 2px solid var(--border-color); }
-            .btn-action-checkin:hover { background: var(--input-bg); border-color: var(--primary-color); color: var(--primary-color); }
-
-            .btn-action-complete { background: var(--primary-color); color: white; box-shadow: 0 4px 12px rgba(255, 167, 38, 0.2); }
-            .btn-action-complete:hover { background: var(--primary-dark); transform: translateY(-2px); }
-            
-            .btn-action-complete-secondary { width: 44px; min-width: 44px; height: 44px; border-radius: 12px; background: transparent; color: var(--text-light); opacity: 0.3; cursor: pointer; transition: 0.2s; border: none; display: flex; align-items: center; justify-content: center; }
-            .btn-action-complete-secondary:hover { color: var(--primary-color); opacity: 1; transform: scale(1.1); }
-
-            .done-badge-full { flex: 1; padding: 12px; border-radius: 12px; background: rgba(30, 215, 96, 0.1); color: var(--success); font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid rgba(30, 215, 96, 0.2); font-size: 0.85rem; }
-            
-            .habit-card-ultra.is-done { border-color: var(--success); background: linear-gradient(to bottom right, var(--card-bg), rgba(30, 215, 96, 0.02)); }
-
-            /* Professional Modern Modal */
-            .modal-overlay {
-                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-                background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(8px);
-                display: flex; align-items: center; justify-content: center; z-index: 2000;
-            }
-            .modal-content-ultra {
-                background: var(--card-bg); padding: 40px; border-radius: 32px;
-                width: 95%; max-width: 520px; position: relative;
-                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-                border: 1px solid var(--border-color); animation: modalIn 0.3s ease-out;
-            }
-            @keyframes modalIn { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
-
-            .modal-header { margin-bottom: 32px; border-bottom: 1px solid var(--border-color); padding-bottom: 20px; }
-            .modal-header h3 { font-size: 1.8rem; font-weight: 900; margin-bottom: 8px; color: var(--text-main); }
-            .modal-header p { color: var(--text-muted); font-size: 1rem; }
-
-            .form-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
-            .form-group label { font-weight: 800; color: var(--text-main); font-size: 0.95rem; display: flex; align-items: center; gap: 8px; }
-            .form-group label i { color: var(--primary-color); font-size: 0.9rem; }
-            
-            .form-group input, .form-group select, .form-group textarea {
-                width: 100%; border-radius: 14px; padding: 14px 18px; border: 2px solid var(--border-color);
-                background: var(--input-bg); color: var(--text-main); font-family: inherit; font-size: 1rem;
-                transition: all 0.2s ease; outline: none;
-            }
-            .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
-                border-color: var(--primary-color); box-shadow: 0 0 0 4px rgba(255, 167, 38, 0.1); background: white;
+            .btn-create-master { 
+                background: var(--primary-color); color: white; border: none; padding: 16px; 
+                border-radius: 16px; font-weight: 900; font-size: 0.85rem; cursor: pointer;
+                display: flex; align-items: center; justify-content: center; gap: 10px;
+                transition: 0.3s; box-shadow: 0 8px 25px rgba(255, 167, 38, 0.2); 
             }
 
-            .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-            .form-group textarea { resize: none; min-height: 100px; }
+            /* Navigator Bar */
+            .habit-navigator-bar { display: flex; flex-direction: column; gap: 20px; margin-bottom: 24px; padding-bottom: 12px; border-bottom: 1.5px solid var(--border-color); }
+            .pills-container { display: flex; background: var(--input-bg); padding: 5px; border-radius: 16px; gap: 4px; }
+            .pill-btn { flex: 1; padding: 10px; border-radius: 12px; border: none; background: transparent; color: var(--text-muted); font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: 0.3s; }
+            .pill-btn.active { background: white; color: var(--primary-color); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
 
-            .modal-actions { display: flex; align-items: center; justify-content: flex-end; gap: 16px; margin-top: 32px; }
-            .btn-primary-premium {
-                background: var(--primary-color); color: white; padding: 14px 36px; border-radius: 16px;
-                border: none; font-weight: 800; cursor: pointer; transition: all 0.3s ease;
-                box-shadow: 0 4px 15px rgba(255, 167, 38, 0.3); font-size: 1rem;
-            }
-            .btn-primary-premium:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(255, 167, 38, 0.4); }
-            .btn-ghost {
-                background: transparent; border: 2px solid transparent; color: var(--text-muted); padding: 13px 24px;
-                border-radius: 16px; font-weight: 700; cursor: pointer; transition: 0.2s; font-size: 1rem;
-            }
-            .btn-ghost:hover { background: rgba(0,0,0,0.05); color: var(--text-main); }
+            .search-master-wrap { position: relative; width: 100%; }
+            .search-master-wrap i { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-light); }
+            .search-master-wrap input { width: 100%; padding: 12px 16px 12px 48px; border-radius: 16px; border: 1.5px solid var(--border-color); background: var(--card-bg); font-family: inherit; font-size: 0.9rem; font-weight: 600; outline: none; }
+
+            /* Grid & Cards (5 per row on desktop) */
+            .habits-grid-premium { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
             
-            .empty-state-premium { text-align: center; padding: 100px 40px; }
-            .empty-state-premium h3 { font-size: 1.4rem; margin-top: 24px; color: var(--text-main); }
-            .empty-state-premium p { color: var(--text-muted); }
+            .habit-card-elite { background: var(--card-bg); border-radius: 20px; border: 1.5px solid var(--border-color); padding: 16px; transition: 0.4s; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); }
+            .habit-card-elite:hover { transform: translateY(-6px); border-color: var(--primary-color); }
+            .habit-card-elite.is-completed { border-color: var(--success); background: linear-gradient(135deg, var(--card-bg) 0%, rgba(34, 197, 94, 0.03) 100%); }
+
+            .card-top { display: flex; gap: 12px; align-items: center; }
+            .icon-sphere { width: 44px; height: 44px; border-radius: 12px; background: var(--input-bg); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+            .icon-sphere img { width: 30px; height: 30px; }
+            .streak-tag { position: absolute; top: -8px; right: -8px; background: #ff4757; color: white; font-size: 0.6rem; padding: 2px 6px; border-radius: 8px; font-weight: 900; border: 2px solid var(--card-bg); }
+
+            .habit-title { font-size: 0.95rem; font-weight: 850; color: var(--text-main); margin-bottom: 4px; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+            .habit-badges { display: flex; gap: 6px; }
+            .badge { font-size: 0.6rem; font-weight: 800; padding: 3px 8px; border-radius: 6px; text-transform: uppercase; }
+            .freq-badge { background: var(--primary-light)15; color: var(--primary-dark); }
+            .time-badge { background: var(--input-bg); color: var(--text-muted); }
+
+            .habit-desc-minimal { font-size: 0.75rem; color: var(--text-muted); line-height: 1.4; font-weight: 500; height: 32px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+
+            .habit-progress-viz { display: flex; flex-direction: column; gap: 6px; }
+            .viz-dots { display: flex; gap: 4px; }
+            .viz-dot { flex: 1; height: 5px; border-radius: 4px; background: var(--border-color); opacity: 0.3; }
+            .viz-dot.active { background: var(--success); opacity: 1; }
+            .viz-label { font-size: 0.6rem; color: var(--text-light); text-transform: uppercase; font-weight: 700; text-align: right; }
+
+            .habit-card-footer { display: flex; gap: 8px; margin-top: auto; }
+            .btn-action-checkin { flex: 1; padding: 10px; border-radius: 12px; border: none; background: var(--primary-color); color: white; font-weight: 850; font-size: 0.75rem; cursor: pointer; }
+            .btn-action-delete { width: 38px; height: 38px; border-radius: 10px; border: 1.5px solid var(--border-color); background: transparent; color: var(--text-light); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+            .done-ribbon { flex: 1; padding: 10px; border-radius: 12px; background: rgba(34, 197, 94, 0.1); color: var(--success); font-weight: 850; font-size: 0.7rem; display: flex; align-items: center; justify-content: center; gap: 6px; border: 1.5px solid rgba(34, 197, 94, 0.15); }
+
+            /* Modal Style */
+            .modal-elite-designer { background: var(--card-bg); border-radius: 32px; width: 95%; max-width: 450px; border: 2px solid var(--border-color); box-shadow: 0 30px 80px rgba(0,0,0,0.3); padding: 0; overflow: hidden; }
+            .modal-header-banner { padding: 30px; background: var(--bg-color); display: flex; gap: 20px; align-items: center; position: relative; border-bottom: 2px solid var(--border-color); }
+            .banner-icon { width: 56px; height: 56px; border-radius: 16px; background: var(--primary-color); color: white; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
+            .banner-text h3 { font-size: 1.3rem; font-weight: 900; color: var(--text-main); }
+            .modal-x-btn { position: absolute; top: 20px; right: 20px; background: none; border: none; color: var(--text-light); cursor: pointer; font-size: 1.1rem; }
+            .elite-form { padding: 30px; display: flex; flex-direction: column; gap: 24px; }
+            .field-group { display: flex; flex-direction: column; gap: 10px; }
+            .field-group label { font-size: 0.75rem; font-weight: 900; color: var(--text-muted); text-transform: uppercase; display: flex; align-items: center; gap: 8px; }
+            .field-group input, .field-group textarea, .field-group select { padding: 14px 18px; border-radius: 14px; border: 2px solid var(--border-color); background: var(--input-bg); font-family: inherit; font-size: 0.95rem; font-weight: 600; color: var(--text-main); outline: none; }
+            .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+            .modal-footer-actions { display: flex; gap: 12px; margin-top: 10px; }
+            .btn-submit-elite { flex: 1.6; padding: 16px; border-radius: 16px; border: none; background: var(--primary-color); color: white; font-weight: 900; font-size: 0.95rem; cursor: pointer; }
+            .btn-cancel-elite { flex: 1; padding: 16px; border-radius: 16px; border: 2px solid var(--border-color); background: transparent; color: var(--text-muted); font-weight: 800; cursor: pointer; }
+
+            @media (min-width: 900px) {
+                .habits-premium-container { padding: 40px; }
+                .habits-elite-dashboard { flex-direction: row; justify-content: space-between; align-items: flex-end; }
+                .stats-master-card { flex-direction: row; align-items: center; width: auto; min-width: 580px; gap: 40px; }
+                .stats-main-flow { flex: 1; gap: 40px; }
+                .btn-create-master { padding: 14px 32px; }
+                .habit-navigator-bar { flex-direction: row; align-items: center; justify-content: space-between; }
+                .pills-container { min-width: 400px; }
+                .search-master-wrap { width: 300px; }
+                .habits-grid-premium { grid-template-columns: repeat(5, 1fr); gap: 16px; }
+            }
+            @media (max-width: 900px) { .habits-grid-premium { grid-template-columns: repeat(2, 1fr); } }
+            @media (max-width: 480px) { .habits-grid-premium { grid-template-columns: 1fr; } }
         </style>
     `;
 
-    // Attach Event Listeners
+    // Re-attach Event Listeners
     const searchInput = document.getElementById('habit-search');
     searchInput.oninput = (e) => { currentFilters.search = e.target.value; updateHabitsUI(container); };
 
-    const statusFilter = document.getElementById('filter-status');
-    statusFilter.onchange = (e) => { currentFilters.status = e.target.value; updateHabitsUI(container); };
-
-    const freqFilter = document.getElementById('filter-freq');
-    freqFilter.onchange = (e) => { currentFilters.frequency = e.target.value; updateHabitsUI(container); };
+    container.querySelectorAll('.pill-btn').forEach(btn => {
+        btn.onclick = () => { currentFilters.status = btn.dataset.status; updateHabitsUI(container); };
+    });
 
     const modal = document.getElementById('habit-modal');
     document.getElementById('show-habit-modal').onclick = () => modal.style.display = 'flex';
     document.getElementById('close-h-modal').onclick = () => modal.style.display = 'none';
+    document.getElementById('close-modal-x').onclick = () => modal.style.display = 'none';
 
     document.getElementById('habit-form').onsubmit = async (e) => {
         e.preventDefault();
@@ -346,11 +315,11 @@ const updateHabitsUI = (container) => {
         try {
             await api.post('/habits/add', data);
             modal.style.display = 'none';
-            renderHabits(container); // Refresh data
+            renderHabits(container); 
         } catch (err) { alert(err.message); }
     };
 
-    container.querySelectorAll('.btn-action-checkin').forEach(btn => {
+    container.querySelectorAll('.checkin-btn').forEach(btn => {
         btn.onclick = async () => {
             try {
                 await api.post(`/habits/check-in/${btn.dataset.id}`);
@@ -359,23 +328,9 @@ const updateHabitsUI = (container) => {
         };
     });
 
-    const markFinalComplete = async (id) => {
-        if (confirm('Chúc mừng bạn đã chinh phục thói quen này! Bạn có muốn kết thúc lộ trình và lưu thành tích không?')) {
-            try {
-                await api.delete(`/habits/delete/${id}`);
-                alert('Thói quen đã được hoàn thành rực rỡ! Bạn quá tuyệt vời!');
-                renderHabits(container);
-            } catch (err) { alert(err.message); }
-        }
-    };
-
-    container.querySelectorAll('.btn-action-complete, .btn-action-complete-secondary').forEach(btn => {
-        btn.onclick = () => markFinalComplete(btn.dataset.id);
-    });
-
-    container.querySelectorAll('.btn-action-delete').forEach(btn => {
+    container.querySelectorAll('.delete-btn').forEach(btn => {
         btn.onclick = async () => {
-            if (confirm('Xóa thói quen này khỏi lộ trình?')) {
+            if (confirm('Lưu trữ kỷ luật này?')) {
                 try {
                     await api.delete(`/habits/delete/${btn.dataset.id}`);
                     renderHabits(container);
