@@ -37,12 +37,12 @@ if (!token) {
             const params = new URLSearchParams(query);
             const title = params.get('title') || 'Lịch trình';
             const date = params.get('date') || '';
-            return `\n\n🔗 *Xem trên website:* [${title}](${FE_URL}/planning?date=${date})`;
+            return `\n\n🔗 *Xem trên website:* [${title}](${FE_URL}/#/planning?date=${date})`;
         });
 
         // Match [view_habit:title=...]
         parsed = parsed.replace(/\[view_habit:title=([^\]]+)\]/g, (match, title) => {
-            return `\n\n🔗 *Xem thói quen:* [${title}](${FE_URL}/habits)`;
+            return `\n\n🔗 *Xem thói quen:* [${title}](${FE_URL}/#/habits)`;
         });
 
         return parsed;
