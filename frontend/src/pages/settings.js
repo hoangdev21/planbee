@@ -217,7 +217,7 @@ export const renderSettings = async (container) => {
                 const token = userData.telegram_token;
                 if (!token) return;
                 navigator.clipboard.writeText(token);
-                api.showBeeAlert('Đã sao chép mã token! 📋');
+                api.showBeeAlert('Đã sao chép! 📋');
             };
         }
 
