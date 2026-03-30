@@ -7,7 +7,7 @@ const token = process.env.TELEGRAM_BOT_TOKEN;
 
 if (!token) {
     console.warn('TELEGRAM_BOT_TOKEN is not set in .env. Telegram Bot is disabled.');
-    module.exports = null;
+    module.exports = { bot: null, sendSimpleMessage: null };
 } else {
     const bot = new TelegramBot(token, { polling: true });
 
@@ -196,6 +196,9 @@ if (!token) {
             bot.sendMessage(chatId, "Ơ kìa, Bee đang gặp chút lỗi. Bạn thử lại sau nhé! 🐝💦");
         }
     });
+
+    const { setBot } = require('./telegramBotStore');
+    setBot(bot);
 
     console.log('Telegram Bot is running...');
     module.exports = bot;

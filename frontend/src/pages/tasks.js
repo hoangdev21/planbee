@@ -5,7 +5,7 @@ let currentPage = 1;
 let viewMode = 'grid';
 const ITEMS_PER_PAGE = 15;
 
-export const renderTasks = async (container) => {
+export const renderTasks = async (container, params = {}) => {
     container.innerHTML = `
         <div style="display: flex; align-items: center; justify-content: center; height: 300px; flex-direction: column; gap: 16px;">
             <div class="loading-spinner"></div>
@@ -124,7 +124,7 @@ export const renderTasks = async (container) => {
 
                             if (viewMode === 'grid') {
                                 return `
-                                    <div class="task-card ${item.category}">
+                                    <div class="task-card ${item.category}" data-id="${item.id}">
                                         <div class="task-card-main">
                                             <div class="task-card-header">
                                                 <div class="task-icon-wrapper">
@@ -184,7 +184,7 @@ export const renderTasks = async (container) => {
                             } else {
                                 // List View Item
                                 return `
-                                    <div class="task-list-item ${item.category}" data-index="${pageItems.indexOf(item)}">
+                                    <div class="task-list-item ${item.category}" data-index="${pageItems.indexOf(item)}" data-id="${item.id}">
                                         <div class="list-item-status">
                                             <img src="${item.category === 'completed' ? '/complete.png?v=3' : '/calendar.png?v=2'}" class="list-item-icon" alt="icon">
                                         </div>
@@ -839,6 +839,38 @@ export const renderTasks = async (container) => {
                     }
                 };
             });
+
+            // AUTO-DETAIL & SCROLL LOGIC
+            if (params.id) {
+                const targetId = params.id;
+                const targetItem = allItems.find(item => item.id == targetId);
+                
+                if (targetItem) {
+                    // Try to find if item is in current page/tab
+                    const isInCurrentList = pageItems.some(item => item.id == targetId);
+                    
+                    if (!isInCurrentList) {
+                        // Switch tab or page if needed
+                        if (currentTab !== targetItem.category && currentTab !== 'all') {
+                            currentTab = 'all'; 
+                            return renderTable();
+                        }
+                    }
+
+                    setTimeout(() => {
+                        const targetEl = container.querySelector(`.task-card[data-id="${targetId}"], .task-list-item[data-id="${targetId}"]`);
+                        if (targetEl) {
+                            targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            targetEl.style.boxShadow = '0 0 20px var(--primary-color)';
+                            targetEl.style.borderColor = 'var(--primary-color)';
+                            setTimeout(() => { targetEl.style.boxShadow = ''; targetEl.style.borderColor = ''; }, 3000);
+                            
+                            // Auto-show detail
+                            showDetail(targetItem);
+                        }
+                    }, 500);
+                }
+            }
         };
 
         renderTable();

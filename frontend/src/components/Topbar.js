@@ -133,14 +133,21 @@ export const renderTopbar = (container) => {
             
             .notification-badge {
                 position: absolute;
-                top: 8px;
-                right: 8px;
-                width: 10px;
-                height: 10px;
-                background: var(--danger);
+                top: -6px;
+                right: -6px;
+                background: #ff4757;
+                color: white;
+                font-size: 0.65rem;
+                font-weight: 800;
+                width: 18px;
+                height: 18px;
                 border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
                 border: 2px solid white;
-                box-shadow: 0 0 0 2px white;
+                box-shadow: 0 2px 8px rgba(255, 71, 87, 0.3);
+                z-index: 10;
             }
 
             .user-profile-card {
@@ -406,23 +413,45 @@ export const renderTopbar = (container) => {
     const notificationList = container.querySelector('.notification-list');
     const notificationBadge = container.querySelector('.notification-badge');
     
+    // Polling and Notification API Support
+    let lastUnreadCount = 0;
+
+    const requestNotificationPermission = async () => {
+        if ('Notification' in window) {
+            if (Notification.permission === 'default') {
+                await Notification.requestPermission();
+            }
+        }
+    };
+
     const loadNotifications = async () => {
         try {
             const response = await api.get('/notifications/all');
             const notifications = response.notifications || [];
-            const unreadCount = notifications.filter(n => !n.is_read).length;
+            const unreadItems = notifications.filter(n => !n.is_read);
+            const unreadCount = unreadItems.length;
 
             if (unreadCount > 0) {
-                notificationBadge.style.display = 'block';
+                notificationBadge.style.display = 'flex';
                 notificationBadge.textContent = unreadCount > 9 ? '9+' : unreadCount;
+                
+                // If count increased, show system notification
+                if (unreadCount > lastUnreadCount && Notification.permission === 'granted') {
+                    const latest = unreadItems[0];
+                    new Notification('PlanBee 🐝', {
+                        body: latest.message,
+                        icon: '/bee.png'
+                    });
+                }
             } else {
                 notificationBadge.style.display = 'none';
             }
+            lastUnreadCount = unreadCount;
 
             if (notifications.length === 0) {
                 notificationList.innerHTML = `<div style="padding: 40px 20px; text-align: center; color: var(--text-muted); font-size: 0.85rem;">Bạn không có thông báo nào.</div>`;
             } else {
-                notificationList.innerHTML = notifications.slice(0, 5).map(noti => {
+                notificationList.innerHTML = notifications.slice(0, 10).map(noti => {
                     const date = new Date(noti.created_at);
                     const diff = Math.floor((new Date() - date) / 60000);
                     const timeStr = diff < 60 ? `${diff} phút trước` : (diff < 1440 ? `${Math.floor(diff/60)} giờ trước` : `${Math.floor(diff/1440)} ngày trước`);
@@ -432,8 +461,12 @@ export const renderTopbar = (container) => {
                     if (noti.message.includes('hoàn thành')) { icon = 'fa-check-circle'; color = 'var(--success)'; }
                     if (noti.message.includes('lập kế hoạch') || noti.message.includes('tạo')) { icon = 'fa-calendar-plus'; color = 'var(--info)'; }
 
+                    const targetPath = noti.type === 'plan' ? `#/planning?id=${noti.target_id}` : (noti.type === 'task' ? `#/tasks?id=${noti.target_id}` : null);
+
                     return `
-                        <div class="notification-item ${noti.is_read ? 'read' : 'unread'}" style="${noti.is_read ? '' : 'background: rgba(255, 167, 38, 0.03);'}">
+                        <div class="notification-item ${noti.is_read ? 'read' : 'unread'}" 
+                             style="${noti.is_read ? '' : 'background: rgba(255, 167, 38, 0.03);'}"
+                             onclick="${targetPath ? `window.location.hash='${targetPath}'` : ''}">
                             <div class="noti-icon" style="background: ${color}15; color: ${color};">
                                 <i class="fas ${icon}"></i>
                             </div>
@@ -448,9 +481,10 @@ export const renderTopbar = (container) => {
         } catch (err) { console.error('Fetch notifications failed:', err); }
     };
 
-    // Load once and poll every 60s
+    // Load once and poll
+    requestNotificationPermission();
     loadNotifications();
-    setInterval(loadNotifications, 60000);
+    setInterval(loadNotifications, 15000); // Polling every 15s for more "real-time" feel
 
     // Mark as read logic
     const markReadBtn = container.querySelector('.dropdown-header span:last-child');

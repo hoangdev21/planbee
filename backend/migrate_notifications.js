@@ -11,13 +11,11 @@ async function migrate() {
             database: process.env.DB_NAME || 'planbee_db'
         });
 
-        console.log('--- Bắt đầu cập nhật Database (Migration v2) ---');
+        console.log('--- Cập nhật bảng notifications ---');
 
         const alterQueries = [
-            { table: 'plans', column: 'color', query: "ALTER TABLE plans ADD COLUMN color VARCHAR(20) DEFAULT '#FFA726'" },
-            { table: 'plans', column: 'priority', query: "ALTER TABLE plans ADD COLUMN priority ENUM('low', 'medium', 'high') DEFAULT 'medium'" },
-            { table: 'plans', column: 'status', query: "ALTER TABLE plans ADD COLUMN status ENUM('pending', 'doing', 'completed', 'cancelled') DEFAULT 'pending'" },
-            { table: 'habits', column: 'preferred_time', query: "ALTER TABLE habits ADD COLUMN preferred_time TIME" }
+            { table: 'notifications', column: 'type', query: "ALTER TABLE notifications ADD COLUMN type VARCHAR(50) DEFAULT NULL" },
+            { table: 'notifications', column: 'target_id', query: "ALTER TABLE notifications ADD COLUMN target_id INT DEFAULT NULL" }
         ];
 
         for (const q of alterQueries) {
@@ -33,9 +31,9 @@ async function migrate() {
             }
         }
 
-        console.log('--- Hoàn tất quá trình cập nhật! ---');
+        console.log('--- Hoàn tất ---');
     } catch (error) {
-        console.error('Lỗi kết nối hoặc thực thi:', error.message);
+        console.error('Lỗi:', error.message);
     } finally {
         if (connection) await connection.end();
     }

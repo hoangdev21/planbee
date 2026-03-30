@@ -25,11 +25,11 @@ class NotificationController {
         }
     }
 
-    static async create(userId, message) {
+    static async create(userId, message, type = null, targetId = null) {
         try {
             await db.execute(
-                'INSERT INTO notifications (user_id, message) VALUES (?, ?)',
-                [userId, message]
+                'INSERT INTO notifications (user_id, message, type, target_id) VALUES (?, ?, ?, ?)',
+                [userId, message, type, targetId]
             );
             return true;
         } catch (error) {

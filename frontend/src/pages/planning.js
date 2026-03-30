@@ -358,20 +358,39 @@ const renderPlanningUI = (container, tasks, habits, plans, params = {}) => {
     document.getElementById('next-btn').onclick = () => { changeDate(1); renderPlanningUI(container, tasks, habits, plans); };
     document.getElementById('today-btn').onclick = () => { currentDate = new Date(); renderPlanningUI(container, tasks, habits, plans); };
 
-    // AUTO-SCROLL LOGIC: Scroll to specific time or title
-    if ((params.time || params.title) && !params.noScroll) {
+    // AUTO-SCROLL LOGIC: Scroll to specific time, title or ID
+    if ((params.time || params.title || params.id) && !params.noScroll) {
+        // If an ID is provided, try to find the item and move the calendar to its date
+        if (params.id) {
+            const targetItem = plans.find(p => p.id == params.id);
+            if (targetItem) {
+                const itemDate = new Date(targetItem.start_time);
+                if (itemDate.toDateString() !== currentDate.toDateString()) {
+                    currentDate = itemDate;
+                    // Re-render to show the correct date
+                    return renderPlanningUI(container, tasks, habits, plans, { ...params, noScroll: false });
+                }
+            }
+        }
+
         setTimeout(() => {
             const scrollContainer = container.querySelector('.calendar-grid-scroll');
             if (!scrollContainer) return;
 
             let targetY = 0;
-            const targetEl = params.title ? 
-                Array.from(container.querySelectorAll('.plan-event, .month-event-badge'))
-                    .find(el => el.innerText.toLowerCase().includes(params.title.toLowerCase()) && el.offsetParent !== null) : null;
+            const targetEl = params.id ? 
+                container.querySelector(`.plan-event[data-id="${params.id}"], .month-event-badge[data-id="${params.id}"]`) :
+                (params.title ? 
+                    Array.from(container.querySelectorAll('.plan-event, .month-event-badge'))
+                        .find(el => el.innerText.toLowerCase().includes(params.title.toLowerCase()) && el.offsetParent !== null) : null);
 
             if (targetEl) {
                 // If we found the actual element, scroll to it
                 targetY = targetEl.offsetTop - 100;
+                // Add a glow effect
+                targetEl.style.boxShadow = '0 0 20px var(--primary-color)';
+                targetEl.style.zIndex = '1000';
+                setTimeout(() => { targetEl.style.boxShadow = ''; targetEl.style.zIndex = ''; }, 3000);
             } else if (params.time && currentView !== 'month') {
                 // Fallback to time calculation
                 const hour = parseInt(params.time.split(':')[0]);

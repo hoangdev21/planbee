@@ -1,5 +1,7 @@
 const db = require('../config/db');
 const { formatDateForMySQL } = require('../utils/dateFormatter');
+const NotificationController = require('./notificationController');
+const { sendSimpleMessage } = require('../services/telegramSender');
 
 const aiController = {
     chat: async (req, res) => {
@@ -225,8 +227,19 @@ ${platform === 'telegram' ? 'TRẢ LỜI TRÊN TELEGRAM: Hãy trả lời cực 
                 let resTool = "";
 
                 if (toolCall.function.name === "add_new_task") {
-                    await db.execute('INSERT INTO tasks (user_id, title, due_date) VALUES (?, ?, ?)', 
+                    const [result] = await db.execute('INSERT INTO tasks (user_id, title, due_date) VALUES (?, ?, ?)', 
                         [userId, args.title, formatDateForMySQL(args.due_date)]);
+                    
+                    await NotificationController.create(userId, `Ghi chú mới: "${args.title}"`, 'task', result.insertId);
+                    
+                    // Notify on Telegram
+                    if (sendSimpleMessage) {
+                        const date = new Date(args.due_date);
+                        const dayStr = date.toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
+                        const timeStr = `${date.getHours()}h${date.getMinutes().toString().padStart(2, '0')}`;
+                        const tgMsg = `📋 *Nhiệm vụ mới!* 🐝\n\nBạn đã thêm nhiệm vụ: *"${args.title}"*\n⏰ Hạn chót: \`${timeStr}\` - _${dayStr}_\n\n_Đừng để Bee nhắc nhở quá nhiều nhé!_ 😉✨`;
+                        await sendSimpleMessage(userId, tgMsg);
+                    }
                     resTool = "Success";
                 } else if (toolCall.function.name === "add_new_plan") {
                     const start = formatDateForMySQL(args.start_time);
@@ -240,8 +253,20 @@ ${platform === 'telegram' ? 'TRẢ LỜI TRÊN TELEGRAM: Hãy trả lời cực 
                     } else {
                         const colors = ['#2196F3', '#4CAF50', '#9C27B0', '#E91E63', '#009688', '#FF9800'];
                         const color = args.color || colors[Math.floor(Math.random() * colors.length)];
-                        await db.execute('INSERT INTO plans (user_id, title, start_time, end_time, color) VALUES (?, ?, ?, ?, ?)', 
+                        const [result] = await db.execute('INSERT INTO plans (user_id, title, start_time, end_time, color) VALUES (?, ?, ?, ?, ?)', 
                             [userId, args.title, start, end, color]);
+                        
+                        await NotificationController.create(userId, `Lập kế hoạch: "${args.title}"`, 'plan', result.insertId);
+                        
+                        // Notify on Telegram
+                        if (sendSimpleMessage) {
+                            const startTimeObj = new Date(args.start_time);
+                            const endTimeObj = new Date(args.end_time);
+                            const dayStr = startTimeObj.toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
+                            const timeRange = `${startTimeObj.getHours()}h${startTimeObj.getMinutes().toString().padStart(2, '0')}-${endTimeObj.getHours()}h${endTimeObj.getMinutes().toString().padStart(2, '0')}`;
+                            const tgMsg = `*Thông báo lịch mới!* 🐝\nBạn đã thêm một lịch trình mới: *"${args.title}"*\n📍 Thời gian: \`${timeRange}\`\n🗓️ Ngày: _${dayStr}_ \n\n_Hãy chuẩn bị tốt nhất để hoàn thành công việc nhé!_ ✨`;
+                            await sendSimpleMessage(userId, tgMsg);
+                        }
                         resTool = "Success";
                     }
                 } else if (toolCall.function.name === "add_new_habit") {

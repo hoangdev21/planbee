@@ -240,6 +240,21 @@ export const renderSettings = async (container) => {
             };
         }
 
+        // Unlink Telegram Logic
+        const unlinkBtn = document.getElementById('unlink-telegram');
+        if (unlinkBtn) {
+            unlinkBtn.onclick = async () => {
+                if (confirm('Bạn có chắc chắn muốn hủy liên kết Telegram? Bee sẽ không thể gửi thông báo cho bạn qua đó nữa.')) {
+                    try {
+                        await api.post('/auth/unlink-telegram');
+                        api.showBeeAlert('Đã hủy liên kết Telegram thành công! 👋');
+                        await loadData();
+                        render();
+                    } catch (err) { api.showBeeAlert(err.message); }
+                }
+            };
+        }
+
         // Password Form
         const passForm = document.getElementById('pass-form');
         if (passForm) {
@@ -364,33 +379,83 @@ export const renderSettings = async (container) => {
                     <div style="display: flex; justify-content: flex-end;"><button class="btn-save">Lưu thay đổi</button></div>
                 </form>
 
-                <!-- Telegram Linking Section -->
-                <div style="margin-top: 32px; padding: 24px; background: var(--primary-light); border-radius: 20px; border: 1.5px dashed var(--primary-color); position: relative; overflow: hidden;">
-                    <div style="position: absolute; right: -20px; top: -10px; font-size: 5rem; color: var(--primary-color); opacity: 0.05; transform: rotate(15deg);">
-                        <i class="fab fa-telegram"></i>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
-                        <i class="fab fa-telegram" style="font-size: 1.8rem; color: #0088cc;"></i>
-                        <h4 style="font-weight: 800; color: var(--text-main); margin: 0; font-size: 1.1rem;">Liên kết Telegram Bot 🐝</h4>
-                    </div>
-                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px; font-weight: 600; line-height: 1.5;">
-                        Nhắn cho Bee ID bên dưới để liên kết tài khoản. Sau đó, bạn có thể gửi tin nhắn thoại hoặc văn bản cho Bee trên Telegram để thêm lịch trình tự động!
-                    </p>
-                    <div style="display: flex; gap: 12px; align-items: center;">
-                        <div style="flex: 1; background: var(--card-bg); padding: 14px 16px; border-radius: 14px; border: 1.5px solid var(--border-color); font-family: 'JetBrains Mono', monospace; font-weight: 800; color: var(--primary-color); font-size: 1.3rem; text-align: center; letter-spacing: 3px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);">
-                            ${userData.telegram_token || 'Đang tạo...'}
+                <!-- Telegram Connection Section -->
+                <div class="telegram-config-box">
+                    <div class="tg-header">
+                        <div class="tg-title-group">
+                            <i class="fab fa-telegram-plane"></i>
+                            <h4>Liên kết Telegram Bot</h4>
                         </div>
-                        <button id="copy-telegram-token" class="btn-save" style="padding: 14px 24px; display: flex; align-items: center; gap: 10px; white-space: nowrap; font-size: 0.9rem;">
-                            <i class="far fa-copy"></i> Sao chép ID
-                        </button>
+                        <div class="tg-status ${userData.telegram_chat_id ? 'connected' : ''}">
+                            <i class="fas ${userData.telegram_chat_id ? 'fa-check-circle' : 'fa-circle-info'}"></i>
+                            ${userData.telegram_chat_id ? 'Đã liên kết' : 'Chưa liên kết'}
+                        </div>
                     </div>
-                    <div style="margin-top: 16px; display: flex; align-items: center; gap: 8px;">
-                        <a href="https://t.me/PlanBeeAI_Bot" target="_blank" style="color: #0088cc; font-weight: 800; font-size: 0.85rem; text-decoration: none; display: flex; align-items: center; gap: 4px;">
-                            Mở Telegram <i class="fas fa-external-link-alt" style="font-size: 0.7rem;"></i>
-                        </a>
-                        ${userData.telegram_chat_id ? '<span style="color: var(--success); font-weight: 800; font-size: 0.85rem; display: flex; align-items: center; gap: 4px; margin-left: auto;"><i class="fas fa-check-circle"></i> Đã liên kết</span>' : '<span style="color: var(--text-muted); font-weight: 700; font-size: 0.85rem; margin-left: auto;">Chưa liên kết</span>'}
+                    
+                    <p class="tg-desc">Kết nối để nhận thông báo đẩy và ra lệnh bằng giọng nói/văn bản trực tiếp từ điện thoại.</p>
+                    
+                    <div class="tg-id-box">
+                        <div class="tg-id-display">${userData.telegram_token || 'Đang tải...'}</div>
+                        <button id="copy-telegram-token" class="tg-action-btn copy">
+                            <i class="far fa-copy"></i> Sao chép
+                        </button>
+                        ${userData.telegram_chat_id ? `
+                            <button id="unlink-telegram" class="tg-action-btn unlink">
+                                <i class="fas fa-link-slash"></i> Hủy liên kết
+                            </button>
+                        ` : `
+                            <a href="https://t.me/PlanBeeAI_Bot" target="_blank" class="tg-action-btn open">
+                                Mở Bot <i class="fas fa-external-link-alt"></i>
+                            </a>
+                        `}
                     </div>
                 </div>
+
+                <style>
+                    .telegram-config-box {
+                        margin-top: 32px;
+                        padding: 24px;
+                        background: var(--card-bg);
+                        border-radius: 20px;
+                        border: 1px solid var(--border-color);
+                        box-shadow: var(--shadow-sm);
+                    }
+                    .tg-header {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        margin-bottom: 12px;
+                    }
+                    .tg-title-group { display: flex; align-items: center; gap: 10px; }
+                    .tg-title-group i { color: #0088cc; font-size: 1.4rem; }
+                    .tg-title-group h4 { margin: 0; font-size: 1.05rem; font-weight: 800; color: var(--text-main); }
+                    
+                    .tg-status {
+                        font-size: 0.75rem; font-weight: 800; padding: 4px 12px; border-radius: 20px;
+                        background: var(--bg-hover); color: var(--text-muted); display: flex; align-items: center; gap: 6px;
+                    }
+                    .tg-status.connected { background: rgba(39, 174, 96, 0.1); color: #27ae60; }
+                    
+                    .tg-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 20px; font-weight: 500; }
+                    
+                    .tg-id-box {
+                        display: flex; gap: 10px; align-items: stretch;
+                        background: var(--input-bg); padding: 8px; border-radius: 14px; border: 1.5px solid var(--border-color);
+                    }
+                    .tg-id-display {
+                        flex: 1; display: flex; align-items: center; justify-content: center;
+                        font-family: 'JetBrains Mono', monospace; font-weight: 800; color: var(--primary-color);
+                        font-size: 1.1rem; letter-spacing: 1px;
+                    }
+                    .tg-action-btn {
+                        padding: 10px 16px; border-radius: 10px; border: none; font-weight: 800; font-size: 0.85rem;
+                        cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 8px; text-decoration: none;
+                    }
+                    .tg-action-btn.copy { background: var(--primary-color); color: white; }
+                    .tg-action-btn.unlink { background: var(--danger)15; color: var(--danger); }
+                    .tg-action-btn.open { background: #0088cc; color: white; }
+                    .tg-action-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+                </style>
             `;
         } else if (activeTab === 'password') {
             return `
@@ -439,12 +504,17 @@ export const renderSettings = async (container) => {
                     ${notifications.length > 0 ? notifications.map(noti => {
                         let icon = 'fa-bell'; let color = 'var(--primary-color)';
                         if (noti.message.includes('hoàn thành')) { icon = 'fa-check-circle'; color = 'var(--success)'; }
-                        if (noti.message.includes('kế hoạch')) { icon = 'fa-calendar-alt'; color = 'var(--info)'; }
+                        if (noti.message.includes('lập kế hoạch') || noti.message.includes('tạo')) { icon = 'fa-calendar-plus'; color = 'var(--info)'; }
+                        
+                        const targetPath = noti.type === 'plan' ? `#/planning?id=${noti.target_id}` : (noti.type === 'task' ? `#/tasks?id=${noti.target_id}` : null);
+
                         return `
-                        <div class="noti-tile ${noti.is_read ? '' : 'unread'}">
+                        <div class="noti-tile ${noti.is_read ? '' : 'unread'}" 
+                             style="cursor: ${targetPath ? 'pointer' : 'default'};"
+                             onclick="${targetPath ? `window.location.hash='${targetPath}'` : ''}">
                             <div class="noti-tile-icon" style="background: ${color}10; color: ${color};"><i class="fas ${icon}"></i></div>
                             <div class="noti-tile-body">
-                                <div class="noti-tile-text">${noti.message}</div>
+                                <div class="noti-tile-text" style="font-weight: ${noti.is_read ? '600' : '800'};">${noti.message}</div>
                                 <div class="noti-tile-date">${new Date(noti.created_at).toLocaleString('vi-VN')}</div>
                             </div>
                             <button class="noti-tile-delete" data-id="${noti.id}"><i class="far fa-trash-alt"></i></button>

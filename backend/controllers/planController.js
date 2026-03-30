@@ -50,7 +50,20 @@ const planController = {
                 [req.user.id, title, description || '', MySQLStart, MySQLEnd, color || '#FFA726', priority || 'medium']
             );
 
-            await NotificationController.create(req.user.id, `Bạn đã lập kế hoạch mới: "${title}"`);
+            await NotificationController.create(req.user.id, `Bạn đã lập kế hoạch mới: "${title}"`, 'plan', result.insertId);
+
+            // Send instant Telegram notification
+            const { sendSimpleMessage } = require('../services/telegramSender');
+            if (sendSimpleMessage) {
+                const start = new Date(start_time);
+                const end = new Date(end_time);
+                const dayStr = start.toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
+                const timeRange = `${start.getHours()}h${start.getMinutes().toString().padStart(2, '0')}-${end.getHours()}h${end.getMinutes().toString().padStart(2, '0')}`;
+                
+                const tgMsg = `*Thông báo lịch mới!* 🐝\nBạn đã thêm một lịch trình mới: *"${title}"*\n📍 Thời gian: \`${timeRange}\`\n🗓️ Ngày: _${dayStr}_ \n\n_Hãy chuẩn bị tốt nhất để hoàn thành công việc nhé!_ ✨`;
+                await sendSimpleMessage(req.user.id, tgMsg);
+            }
+
             res.status(201).json({ id: result.insertId, message: 'Lập kế hoạch thành công!' });
         } catch (error) {
             console.error('Create plan error:', error);

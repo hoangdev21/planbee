@@ -33,7 +33,19 @@ const taskController = {
                 [req.user.id, title, description || '', priority || 'medium', MySQLDueDate]
             );
 
-            await NotificationController.create(req.user.id, `Bạn đã tạo nhiệm vụ mới: "${title}"`);
+            await NotificationController.create(req.user.id, `Bạn đã tạo nhiệm vụ mới: "${title}"`, 'task', result.insertId);
+
+            // Send instant Telegram notification
+            const { sendSimpleMessage } = require('../services/telegramSender');
+            if (sendSimpleMessage) {
+                const date = new Date(due_date);
+                const dayStr = date.toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
+                const timeStr = `${date.getHours()}h${date.getMinutes().toString().padStart(2, '0')}`;
+                
+                const tgMsg = `📋 *Nhiệm vụ mới!* 🐝\n\nBạn đã thêm nhiệm vụ: *"${title}"*\n⏰ Hạn chót: \`${timeStr}\` - _${dayStr}_\n\n_Đừng để Bee nhắc nhở quá nhiều nhé!_ 😉✨`;
+                await sendSimpleMessage(req.user.id, tgMsg);
+            }
+
             res.status(201).json({ id: result.insertId, title, message: 'Thêm nhiệm vụ thành công!' });
         } catch (error) {
             console.error('Create task error:', error);
@@ -83,7 +95,14 @@ const taskController = {
                     const [task] = await db.execute('SELECT title FROM tasks WHERE id = ?', [id]);
                     title = task[0] ? task[0].title : 'nhiệm vụ';
                 }
-                await NotificationController.create(req.user.id, `Bạn đã hoàn thành nhiệm vụ: "${title}"`);
+                await NotificationController.create(req.user.id, `Bạn đã hoàn thành nhiệm vụ: "${title}"`, 'task', id);
+
+                // Send instant Telegram notification
+                const { sendSimpleMessage } = require('../services/telegramSender');
+                if (sendSimpleMessage) {
+                    const tgMsg = `🎉 *Chúc mừng!* 🐝\n\nBạn đã hoàn tất nhiệm vụ: *"${title}"*\n\n_Bee rất tự hào về sự chăm chỉ của bạn! Tiếp tục phát huy nhé._ 🍯✨`;
+                    await sendSimpleMessage(req.user.id, tgMsg);
+                }
             }
             res.json({ message: 'Cập nhật thành công!' });
         } catch (error) {

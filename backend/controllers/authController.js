@@ -211,6 +211,36 @@ const authController = {
             console.error('Update settings error:', error);
             res.status(500).json({ message: 'Lỗi khi lưu cài đặt.' });
         }
+    },
+    // Unlink Telegram
+    unlinkTelegram: async (req, res) => {
+        try {
+            const [users] = await db.execute(
+                'SELECT username, telegram_chat_id FROM users WHERE id = ?',
+                [req.user.id]
+            );
+
+            if (users.length === 0 || !users[0].telegram_chat_id) {
+                return res.status(400).json({ message: 'Tài khoản chưa được liên kết Telegram!' });
+            }
+
+            const { username } = users[0];
+
+            // Send final notification via Telegram before unlinking
+            const { sendSimpleMessage } = require('../services/telegramSender');
+            if (sendSimpleMessage) {
+                const tgMsg = `👋 *Thông báo hủy liên kết!* 🐝\n\nBạn vừa thực hiện hủy liên kết giữa tài khoản Telegram này và tài khoản PlanBee: *"${username}"*.\n\n_Từ giờ bạn sẽ không nhận được thông báo nhắc lịch qua đây nữa. Hẹn gặp lại bạn nhé!_ ✨`;
+                await sendSimpleMessage(req.user.id, tgMsg);
+            }
+
+            // Unlink in DB
+            await db.execute('UPDATE users SET telegram_chat_id = NULL WHERE id = ?', [req.user.id]);
+
+            res.json({ success: true, message: 'Đã hủy liên kết Telegram thành công!' });
+        } catch (error) {
+            console.error('Unlink Telegram error:', error);
+            res.status(500).json({ message: 'Lỗi khi hủy liên kết Telegram.' });
+        }
     }
 };
 
