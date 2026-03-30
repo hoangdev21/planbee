@@ -11,7 +11,12 @@ const PRESET_COLORS = [
     '#FFEE58', '#78909C', '#F06292', '#26A69A', '#3F51B5', '#D4E157'
 ];
 
+let syncInterval = null;
+
 export const renderPlanning = async (container, params = {}) => {
+    // Cleanup old interval if exists
+    if (syncInterval) clearInterval(syncInterval);
+    
     container.innerHTML = `<div style="padding: 40px; text-align: center; color: var(--text-muted); font-size: 1.1rem; font-weight: 600;">Đang tải lịch trình...</div>`;
     
     // Handle params for deep linking
@@ -66,7 +71,12 @@ const renderPlanningUI = (container, tasks, habits, plans, params = {}) => {
         <div class="planning-root fade-in">
             <div class="planning-header">
                 <div class="header-main">
-                    <h2 class="page-title">Lập kế hoạch</h2>
+                    <h2 class="page-title" style="display: flex; align-items: center; gap: 12px;">
+                        Lập kế hoạch
+                        <button id="manual-sync-btn" title="Làm mới dữ liệu từ Telegram" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1rem; transition: all 0.3s; padding: 4px;">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </h2>
                     <div class="view-selector">
                         <button class="view-btn ${currentView === 'day' ? 'active' : ''}" data-view="day">Ngày</button>
                         <button class="view-btn ${currentView === 'week' ? 'active' : ''}" data-view="week">Tuần</button>
@@ -357,6 +367,41 @@ const renderPlanningUI = (container, tasks, habits, plans, params = {}) => {
     document.getElementById('prev-btn').onclick = () => { changeDate(-1); renderPlanningUI(container, tasks, habits, plans); };
     document.getElementById('next-btn').onclick = () => { changeDate(1); renderPlanningUI(container, tasks, habits, plans); };
     document.getElementById('today-btn').onclick = () => { currentDate = new Date(); renderPlanningUI(container, tasks, habits, plans); };
+
+    // MANUAL SYNC HANDLER
+    const syncBtn = document.getElementById('manual-sync-btn');
+    if (syncBtn) {
+        syncBtn.onclick = async (e) => {
+            e.stopPropagation();
+            syncBtn.style.animation = 'spin 1s infinite linear';
+            await renderPlanning(container, { ...params, noScroll: true });
+        };
+    }
+
+    // AUTO-SYNC (POLLING): Refresh every 30 seconds to catch Telegram updates
+    syncInterval = setInterval(async () => {
+        try {
+            // Only fetch if tab is active to save resources
+            if (document.visibilityState === 'visible') {
+                const [tasksRes, habitsRes, plansRes] = await Promise.all([
+                    api.get('/tasks/all'), api.get('/habits/all'), api.get('/plans/all')
+                ]);
+                // Re-render UI with new data without flashing the whole container
+                renderPlanningUI(container, tasksRes.tasks, habitsRes.habits, plansRes.plans, { ...params, noScroll: true });
+            }
+        } catch (e) { console.warn("Auto-sync failed", e); }
+    }, 30000);
+
+    // Ensure style for spin animation
+    if (!document.getElementById('planning-animations')) {
+        const style = document.createElement('style');
+        style.id = 'planning-animations';
+        style.innerHTML = `
+            @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+            #manual-sync-btn:hover { color: var(--primary-color) !important; transform: scale(1.2); }
+        `;
+        document.head.appendChild(style);
+    }
 
     // AUTO-SCROLL LOGIC: Scroll to specific time, title or ID
     if ((params.time || params.title || params.id) && !params.noScroll) {
