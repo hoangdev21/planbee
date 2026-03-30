@@ -3,6 +3,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 require('dotenv').config();
+const keepAlive = require('./utils/keepAlive');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -49,4 +50,10 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
+    
+    // Self-ping to keeps the Render Free-Tier instance alive
+    if (process.env.NODE_ENV === 'production') {
+        const BACKEND_URL = process.env.BACKEND_URL;
+        keepAlive(BACKEND_URL);
+    }
 });
