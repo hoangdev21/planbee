@@ -1,14 +1,7 @@
+import '../styles/landing.css';
 import { state } from '../../main.js';
 
 export const renderLanding = (container) => {
-    // Inject CSS for landing page
-    if (!document.getElementById('landing-styles')) {
-        const link = document.createElement('link');
-        link.id = 'landing-styles';
-        link.rel = 'stylesheet';
-        link.href = '/src/styles/landing.css';
-        document.head.appendChild(link);
-    }
 
     container.innerHTML = `
         <div class="landing-page">
