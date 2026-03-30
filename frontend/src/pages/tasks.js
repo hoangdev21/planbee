@@ -362,12 +362,14 @@ export const renderTasks = async (container, params = {}) => {
                         .tasks-grid {
                             grid-template-columns: repeat(2, 1fr);
                             gap: 12px;
+                            padding: 0 16px 0 12px; /* Balanced mobile padding */
                         }
                     }
 
                     @media (max-width: 480px) {
                         .tasks-grid {
-                            gap: 10px;
+                            gap: 8px;
+                            padding: 0 12px 0 10px;
                         }
                         .page-title { font-size: 1.5rem; }
                     }
@@ -375,19 +377,20 @@ export const renderTasks = async (container, params = {}) => {
                     /* Card Design */
                     .task-card {
                         background: var(--card-bg); 
-                        border-radius: 24px;
+                        border-radius: 20px; /* Slimmer radius */
                         border: 1.5px solid var(--border-color);
                         display: flex;
                         flex-direction: column;
                         transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
                         position: relative;
-                        box-shadow: var(--shadow-md);
+                        box-shadow: var(--shadow-sm);
+                        overflow: hidden; /* Prevent text overflow */
                     }
                     [data-theme="light"] .task-card { background: #FFF9F0; border-color: rgba(255, 167, 38, 0.12); }
 
                     .task-card:hover { 
-                        transform: translateY(-8px); 
-                        box-shadow: 0 15px 35px rgba(255, 167, 38, 0.15); 
+                        transform: translateY(-6px); 
+                        box-shadow: 0 12px 30px rgba(255, 167, 38, 0.15); 
                         border-color: var(--primary-color);
                     }
                     .task-card.completed { 
@@ -398,36 +401,36 @@ export const renderTasks = async (container, params = {}) => {
                     [data-theme="light"] .task-card.completed { background: #f0fdf4 !important; }
 
 
-                    .task-card-main { padding: 18px 16px 14px; flex: 1; }
+                    .task-card-main { padding: 14px 12px 10px; flex: 1; }
                     
                     .task-card-header {
                         display: flex;
-                        gap: 12px;
-                        margin-bottom: 16px;
+                        gap: 10px;
+                        margin-bottom: 12px;
                         align-items: flex-start;
                     }
                     .task-icon-wrapper {
-                        width: 44px;
-                        height: 44px;
-                        min-width: 44px;
+                        width: 38px;
+                        height: 38px;
+                        min-width: 38px;
                         display: flex;
                         align-items: center;
                         justify-content: center;
-                        border-radius: 12px;
+                        border-radius: 10px;
                         background: var(--primary-light)15;
                     }
                     .task-card-icon {
-                        width: 34px;
-                        height: 34px;
+                        width: 28px;
+                        height: 28px;
                         object-fit: contain;
                     }
 
                     .task-card-title-group { flex: 1; min-width: 0; }
                     .task-card-title {
-                        font-size: 1.05rem;
+                        font-size: 0.95rem; /* Compact font */
                         font-weight: 800;
                         color: var(--text-main);
-                        margin-bottom: 6px;
+                        margin-bottom: 4px;
                         white-space: nowrap;
                         overflow: hidden;
                         text-overflow: ellipsis;
@@ -439,81 +442,82 @@ export const renderTasks = async (container, params = {}) => {
                         gap: 6px;
                     }
                     .task-type-tag {
-                        font-size: 0.65rem;
-                        font-weight: 800;
-                        padding: 3px 10px;
-                        border-radius: 8px;
+                        font-size: 0.6rem; /* Smaller tag */
+                        font-weight: 850;
+                        padding: 3px 8px;
+                        border-radius: 6px;
                         background: var(--sidebar-bg);
                         color: var(--text-muted);
                         text-transform: uppercase;
                         letter-spacing: 0.5px;
+                        white-space: nowrap; /* Prevent wrap as requested */
                     }
                     .task-priority-group {
                         display: flex;
                         align-items: center;
-                        gap: 6px;
-                        padding: 2px 8px;
-                        border-radius: 8px;
+                        gap: 4px;
+                        padding: 2px 6px;
+                        border-radius: 6px;
                         background: rgba(255,255,255,0.05);
                     }
                     [data-theme="light"] .task-priority-group { background: rgba(0,0,0,0.03); }
 
-                    .priority-dot { width: 6px; height: 6px; border-radius: 50%; }
-                    .priority-text { font-size: 0.65rem; font-weight: 700; color: var(--text-light); }
+                    .priority-dot { width: 5px; height: 5px; border-radius: 50%; }
+                    .priority-text { font-size: 0.6rem; font-weight: 700; color: var(--text-light); }
 
-                    .task-card-content { display: flex; flex-direction: column; gap: 16px; }
+                    .task-card-content { display: flex; flex-direction: column; gap: 12px; }
 
                     .time-info-box {
-                        padding: 10px 12px;
+                        padding: 8px 10px;
                         background: var(--bg-color);
-                        border-radius: 14px;
+                        border-radius: 12px;
                         border: 1px solid var(--border-color)44;
                     }
                     .time-row {
                         display: flex;
                         align-items: center;
-                        gap: 10px;
-                        margin-bottom: 4px;
+                        gap: 8px;
+                        margin-bottom: 2px;
                     }
-                    .time-row i { font-size: 0.9rem; color: var(--text-light); }
-                    .time-val { font-size: 0.95rem; font-weight: 700; color: var(--text-main); }
-                    .date-row { font-size: 0.8rem; color: var(--text-muted); padding-left: 28px; font-weight: 500; }
+                    .time-row i { font-size: 0.8rem; color: var(--text-light); }
+                    .time-val { font-size: 0.85rem; font-weight: 700; color: var(--text-main); }
+                    .date-row { font-size: 0.75rem; color: var(--text-muted); padding-left: 24px; font-weight: 600; }
 
                     .card-complete-btn {
                         width: 100%;
-                        padding: 12px;
-                        border-radius: 14px;
+                        padding: 10px;
+                        border-radius: 12px;
                         border: 1.5px solid var(--primary-color);
                         background: transparent;
                         color: var(--primary-color);
-                        font-weight: 800;
-                        font-size: 0.9rem;
+                        font-weight: 850;
+                        font-size: 0.8rem;
                         transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
                         cursor: pointer;
                     }
                     .card-complete-btn:hover {
                         background: var(--primary-color);
                         color: white;
-                        box-shadow: 0 8px 20px var(--primary-color)44;
-                        transform: translateY(-2px);
+                        box-shadow: 0 6px 15px var(--primary-color)44;
                     }
                     .card-status-label {
                         width: 100%;
-                        padding: 12px;
-                        border-radius: 14px;
+                        padding: 10px;
+                        border-radius: 12px;
                         text-align: center;
-                        font-size: 0.9rem;
-                        font-weight: 800;
+                        font-size: 0.8rem;
+                        font-weight: 850;
                     }
 
                     .task-divider {
                         height: 1px;
                         border-top: 1px dashed var(--border-color);
-                        margin: 0 16px;
+                        margin: 0 12px;
+                        opacity: 0.5;
                     }
 
                     .task-card-footer {
-                        padding: 12px 16px;
+                        padding: 10px 12px;
                     }
                     .task-card-actions {
                         display: flex;
