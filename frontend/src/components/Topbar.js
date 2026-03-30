@@ -15,7 +15,10 @@ export const renderTopbar = (container) => {
 
     container.innerHTML = `
         <div class="topbar-wrapper" style="width: 100%; display: flex; align-items: center; justify-content: space-between; height: 100%; padding: 0 var(--spacing-lg);">
-            <div class="topbar-left">
+            <div class="topbar-left" style="display: flex; align-items: center;">
+                <button id="mobile-menu-btn" class="mobile-menu-btn">
+                    <i class="fas fa-bars"></i>
+                </button>
                 <h3 id="page-title" style="font-size: 1.4rem; font-weight: 800; color: var(--text-main); margin: 0; letter-spacing: -0.5px;">Tổng quan</h3>
             </div>
             
@@ -494,7 +497,41 @@ export const renderTopbar = (container) => {
             window.location.hash = '#/login';
         };
     }
+
+    // 5. Mobile Menu Toggle Logic
+    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+    const sidebar = document.getElementById('sidebar');
+    const drawerOverlay = document.getElementById('drawer-overlay');
+
+    if (mobileMenuBtn) {
+        mobileMenuBtn.onclick = () => {
+            sidebar.classList.add('active');
+            drawerOverlay.classList.add('active');
+        };
+    }
 };
+
+/* Additional Responsive Styles for Topbar */
+const style = document.createElement('style');
+style.textContent = `
+    @media (max-width: 768px) {
+        .search-container {
+            display: none !important; /* Hide search on mobile for clarity */
+        }
+        .user-meta {
+            display: none !important;
+        }
+        .user-profile-card {
+            padding: 4px !important;
+            border: none !important;
+            background: transparent !important;
+        }
+        #page-title {
+            font-size: 1.1rem !important;
+        }
+    }
+`;
+document.head.appendChild(style);
 
 
 

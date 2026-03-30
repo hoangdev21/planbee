@@ -19,7 +19,7 @@ export const renderLanding = (container) => {
                 </div>
                 <div class="nav-actions">
                     ${localStorage.getItem('token') && localStorage.getItem('token') !== 'null' && localStorage.getItem('token') !== 'undefined' ? `
-                        <a href="#/dashboard" class="btn btn-primary-orange" style="padding: 12px 28px; border-radius: 12px; color: white; font-weight: 700;">Vào Dashboard 🚀</a>
+                        <a href="#/dashboard" class="btn btn-primary-orange" style="padding: 12px 28px; border-radius: 12px; color: white; font-weight: 700;">Vào Dashboard</a>
                         <a href="#" id="landing-logout" class="nav-link" style="padding-top: 10px; margin-left: 15px; font-size: 0.9rem; opacity: 0.7;">Đăng xuất</a>
                     ` : `
                         <a href="#/login" class="nav-link" style="padding-top: 10px;">Đăng nhập</a>

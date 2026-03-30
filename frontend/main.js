@@ -103,22 +103,21 @@ const renderAppShell = async (container, activePage, params = {}) => {
     // Basic sidebar and topbar HTML
     container.innerHTML = `
         <div class="layout-container">
+            <div class="drawer-overlay" id="drawer-overlay"></div>
             <aside id="sidebar"></aside>
             <div class="main-content" style="display: flex; flex-direction: column; min-height: 125vh;">
                 <header id="topbar"></header>
                 <main id="page-content" class="fade-in" style="flex: 1;"></main>
-                <footer class="app-footer" style="padding: 24px 40px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: var(--card-bg); font-size: 0.85rem; color: var(--text-muted); font-weight: 600; transition: all 0.3s ease;">
-                    <div>© 2026 <span style="color: var(--primary-color);">PlanBee</span> - Tăng cường hiệu suất làm việc 🚀</div>
-                    <div style="display: flex; gap: 24px; align-items: center;">
-                        <span style="display: flex; align-items: center; gap: 8px;">
-                            Hệ thống: <span style="color: var(--success); font-weight: 800; display: inline-flex; align-items: center; gap: 5px;">
-                                <span style="position: relative; width: 8px; height: 8px; background: var(--success); border-radius: 50%; display: inline-block;">
-                                    <span style="position: absolute; inset: 0; background: var(--success); border-radius: 50%; animation: ping 1.5s infinite; opacity: 0.6;"></span>
-                                </span>
-                                ỔN ĐỊNH
+                <footer class="app-footer" style="padding: 12px 24px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: var(--card-bg); font-size: 0.725rem; color: var(--text-muted); font-weight: 500; transition: all 0.3s ease;">
+                    <div class="footer-left">© 2026 <span style="color: var(--primary-color); font-weight: 700;">PlanBee</span> • Tăng cường hiệu suất 🚀</div>
+                    <div class="footer-right" style="display: flex; gap: 16px; align-items: center;">
+                        <div style="display: flex; align-items: center; gap: 6px; padding: 4px 10px; background: rgba(0, 184, 148, 0.05); border-radius: 20px; border: 1px solid rgba(0, 184, 148, 0.1);">
+                            <span style="position: relative; width: 6px; height: 6px; background: var(--success); border-radius: 50%; display: inline-block;">
+                                <span style="position: absolute; inset: 0; background: var(--success); border-radius: 50%; animation: ping 1.5s infinite; opacity: 0.6;"></span>
                             </span>
-                        </span>
-                        <span style="opacity: 0.6;">Phiên bản: 1.2.0</span>
+                            <span style="color: var(--success); font-weight: 800; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px;">Ổn định</span>
+                        </div>
+                        <span style="opacity: 0.5; font-weight: 700; letter-spacing: 0.5px;">v1.2.0</span>
                     </div>
                 </footer>
             </div>
@@ -131,6 +130,15 @@ const renderAppShell = async (container, activePage, params = {}) => {
     
     renderSidebar(document.getElementById('sidebar'), activePage);
     renderTopbar(document.getElementById('topbar'));
+
+    // Handle Mobile Menu Logic
+    const drawerOverlay = document.getElementById('drawer-overlay');
+    const sidebar = document.getElementById('sidebar');
+
+    drawerOverlay.addEventListener('click', () => {
+        sidebar.classList.remove('active');
+        drawerOverlay.classList.remove('active');
+    });
 
     // Render Actual Page Content
     const content = document.getElementById('page-content');

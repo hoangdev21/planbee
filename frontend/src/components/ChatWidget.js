@@ -592,6 +592,17 @@ const addStyles = () => {
         .show-sparkles::before { content: '✨'; position: absolute; left: -20px; top: -10px; animation: sparkleIn 1.5s infinite; }
         .show-sparkles::after { content: '✨'; position: absolute; right: -20px; bottom: -10px; animation: sparkleIn 1.5s infinite reverse; }
         @keyframes sparkleIn { 0%, 100% { opacity: 0; transform: scale(0.5); } 50% { opacity: 1; transform: scale(1.2) rotate(20deg); } }
+
+        @media (max-width: 600px) {
+            #bee-chat-widget { bottom: 20px; right: 20px; }
+            .chat-widget-closed { width: 60px; height: 60px; }
+            .bee-bubble-icon { width: 36px; height: 36px; }
+            .bubble-notif { min-width: 20px; height: 20px; font-size: 0.65rem; top: -4px; right: -4px; border-width: 2px; }
+            .chat-widget-expanded { width: 100%; height: 100%; border-radius: 0; position: fixed; top: 0; left: 0; }
+            .chat-header { padding: 15px; }
+            .chat-messages { padding: 15px; }
+            .msg-content { font-size: 0.9rem; padding: 10px 14px; }
+        }
     `;
     document.head.appendChild(style);
 };

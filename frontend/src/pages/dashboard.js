@@ -19,7 +19,7 @@ export const renderDashboard = async (container) => {
                 </div>
 
                 <!-- Stats Grid -->
-                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px;">
+                <div class="stats-grid-compact" style="display: flex; gap: 12px; overflow-x: auto; padding-bottom: 20px; scrollbar-width: none; -ms-overflow-style: none;">
                     ${renderStatCard('Tổng công việc', stats.total || 0, '/sum.png', 'var(--primary-color)')}
                     ${renderStatCard('Hoàn thành', stats.completed || 0, '/complete.png', 'var(--success)')}
                     ${renderStatCard('Đang thực hiện', stats.doing || 0, '/proceed.png', 'var(--info)')}
@@ -27,16 +27,17 @@ export const renderDashboard = async (container) => {
                 </div>
 
                 <!-- Today's Schedule - Redesigned to Horizontal Scroll Cards -->
-                <div style="background: var(--card-bg); border-radius: 28px; border: 1.5px solid var(--border-color); padding: 32px; box-shadow: var(--shadow-md); position: relative; overflow: hidden;">
+                <div class="dashboard-section-card" style="background: var(--card-bg); border-radius: 28px; border: 1.5px solid var(--border-color); box-shadow: var(--shadow-md); padding: 24px; position: relative;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-                        <h3 style="font-size: 1.5rem; font-weight: 900; display: flex; align-items: center; gap: 16px; color: var(--text-main);">
-                            <img src="/calendar-dashboard.png" alt="schedule" style="width: 38px; height: 38px; object-fit: contain;">
+                        <h3 style="font-size: 1.15rem; font-weight: 900; display: flex; align-items: center; gap: 12px; color: var(--text-main); margin: 0;">
+                            <img src="/calendar-dashboard.png" alt="schedule" style="width: 28px; height: 28px; object-fit: contain;">
                             Lịch trình hôm nay
                         </h3>
-                        <a href="#/planning" style="font-size: 0.88rem; color: var(--primary-color); font-weight: 800; text-decoration: none; display: flex; align-items: center; gap: 6px;">
-                            XEM CHI TIẾT <i class="fas fa-arrow-right" style="font-size: 0.75rem;"></i>
+                        <a href="#/planning" class="btn-all">
+                            XEM CHI TIẾT <i class="fas fa-arrow-right" style="font-size: 0.65rem;"></i>
                         </a>
                     </div>
+
                     
                     <div class="today-schedule-container" style="display: flex; gap: 20px; overflow-x: auto; padding: 10px 4px 20px 4px; scroll-snap-type: x mandatory; scrollbar-width: none; -ms-overflow-style: none;">
                         ${todayPlans.length > 0 ? todayPlans.map(plan => {
@@ -45,9 +46,12 @@ export const renderDashboard = async (container) => {
                             const isDone = plan.status === 'completed';
                             
                             return `
-                                 <div class="schedule-card ${isDone ? 'done' : ''}" style="flex: 0 0 calc(100% / 6 - 20px); min-width: 180px; scroll-snap-align: start; background: var(--card-bg); border-radius: 20px; padding: 20px; border: 1.5px solid var(--border-color); box-shadow: var(--shadow-sm); transition: all 0.3s ease; display: flex; flex-direction: column; gap: 12px; position: relative; overflow: hidden; cursor: pointer;">
-                                     <!-- Simple colored indicator dot -->
-                                     <div style="width: 8px; height: 8px; border-radius: 50%; background: ${isDone ? 'var(--success)' : plan.color}; margin-bottom: 4px;"></div>
+                                 <div class="schedule-card ${isDone ? 'done' : ''}" style="flex: 0 0 calc(100% / 6 - 20px); min-width: 190px; scroll-snap-align: start; background: var(--card-bg); border-radius: 20px; padding: 20px; border: 1.5px solid var(--border-color); box-shadow: var(--shadow-sm); transition: all 0.3s ease; display: flex; flex-direction: column; gap: 12px; position: relative; overflow: hidden; cursor: pointer;">
+                                     <!-- Professional icon indicator -->
+                                     <div style="display: flex; align-items: center; justify-content: flex-start; margin-bottom: 2px;">
+                                         <img src="/only-today.png" alt="icon" style="width: 24px; height: 24px; object-fit: contain; opacity: 0.9; filter: ${isDone ? 'grayscale(0.6)' : 'none'};">
+                                         <div style="width: 6px; height: 6px; border-radius: 50%; background: ${isDone ? 'var(--success)' : plan.color}; margin-left: 8px; box-shadow: 0 0 6px ${plan.color}44;"></div>
+                                     </div>
                                      
                                      <div style="display: flex; flex-direction: column; gap: 4px;">
                                          <div style="font-size: 0.7rem; font-weight: 800; color: var(--text-muted); display: flex; align-items: center; gap: 5px;">
@@ -82,45 +86,66 @@ export const renderDashboard = async (container) => {
                  <!-- Main Content Row: habits -->
                  <div style="display: grid; grid-template-columns: 1fr; gap: 32px;">
                      <!-- Habit Streaks -->
-                     <div style="background: var(--card-bg); border-radius: 28px; border: 1.5px solid var(--border-color); padding: 32px; box-shadow: var(--shadow-md);">
-                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px;">
-                            <h3 style="font-size: 1.5rem; font-weight: 900; display: flex; align-items: center; gap: 16px; color: var(--text-main);">
-                                <img src="/tree.png" alt="habits" style="width: 38px; height: 38px; object-fit: contain;">
+                     <div class="dashboard-section-card" style="background: var(--card-bg); border-radius: 28px; border: 1.5px solid var(--border-color); box-shadow: var(--shadow-md); padding: 24px;">
+                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                            <h3 style="font-size: 1.15rem; font-weight: 900; display: flex; align-items: center; gap: 12px; color: var(--text-main); margin: 0;">
+                                <img src="/tree.png" alt="habits" style="width: 28px; height: 28px; object-fit: contain;">
                                 Thói quen hàng ngày
                             </h3>
-                             <a href="#/habits" style="font-size: 0.88rem; color: var(--primary-color); font-weight: 800; text-decoration: none;">TẤT CẢ <i class="fas fa-arrow-right"></i></a>
+                             <a href="#/habits" class="btn-all">TẤT CẢ <i class="fas fa-arrow-right" style="font-size: 0.65rem;"></i></a>
                          </div>
-                         
-                         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 24px;">
-                             ${habits.length > 0 ? habits.slice(0, 6).map(habit => {
-                                 const isDone = habit.last_completed && habit.last_completed.startsWith(formatDateToYYYYMMDD(new Date()));
-                                 return `
-                                     <div style="display: flex; align-items: center; gap: 20px; padding: 20px; border-radius: 20px; background: ${isDone ? 'rgba(0, 184, 148, 0.08)' : 'var(--bg-color)'}; border: 1.5px solid var(--border-color); box-shadow: var(--shadow-sm); transition: transform 0.2s;">
-                                         <div style="width: 54px; height: 54px; display: flex; align-items: center; justify-content: center; transition: all 0.3s;">
-                                             <img src="${isDone ? '/complete.png' : (habit.frequency === 'daily' ? '/lightning.png' : '/thunder.png')}" style="width: 40px; height: 40px; object-fit: contain; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1));">
-                                         </div>
-                                         <div style="flex: 1;">
-                                             <div style="font-weight: 800; font-size: 1rem; color: ${isDone ? 'var(--success)' : 'var(--text-main)'}; margin-bottom: 4px;">${habit.title}</div>
-                                             <div style="display:flex; align-items:center; gap:8px;">
-                                                 <div style="height: 6px; background: var(--border-color); flex: 1; border-radius: 10px; overflow: hidden;">
-                                                     <div style="width: ${Math.min(habit.current_streak * 10, 100)}%; height: 100%; background: var(--success); border-radius: 10px;"></div>
-                                                 </div>
-                                                 <span style="font-size: 0.75rem; font-weight: 800; color: var(--text-muted); white-space: nowrap;">${habit.current_streak} ngày 🔥</span>
-                                             </div>
-                                         </div>
-                                     </div>
-                                 `;
-                             }).join('') : `<p style="text-align: center; color: var(--text-light); grid-column: 1/-1; padding: 40px; border: 2px dashed var(--border-color); border-radius: 20px;">Bắt đầu xây dựng kỷ luật ngay hôm nay!</p>`}
-                         </div>
+                        <div class="habits-horizontal-container" style="display: flex; gap: 20px; overflow-x: auto; padding: 10px 4px 20px 4px; scroll-snap-type: x mandatory; scrollbar-width: none; -ms-overflow-style: none;">
+                            ${habits.length > 0 ? habits.map(habit => {
+                                const isDone = habit.last_completed && habit.last_completed.startsWith(formatDateToYYYYMMDD(new Date()));
+                                const streakPercent = Math.min(habit.current_streak * 10, 100);
+                                
+                                return `
+                                    <div class="habit-card ${isDone ? 'done' : ''}" style="flex: 0 0 280px; scroll-snap-align: start; background: var(--card-bg); border-radius: 24px; padding: 24px; border: 1.5px solid var(--border-color); box-shadow: var(--shadow-sm); transition: all 0.3s ease; display: flex; flex-direction: column; gap: 16px; cursor: pointer;">
+                                        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                            <div style="width: 50px; height: 50px; border-radius: 14px; background: ${isDone ? 'rgba(0, 184, 148, 0.1)' : 'rgba(0,0,0,0.03)'}; display: flex; align-items: center; justify-content: center; border: 1.5px solid ${isDone ? 'var(--success)' : 'var(--border-color)'};">
+                                                <img src="${isDone ? '/complete.png' : (habit.frequency === 'daily' ? '/lightning.png' : '/thunder.png')}" style="width: 32px; height: 32px; object-fit: contain;">
+                                            </div>
+                                            <div style="text-align: right;">
+                                                <div style="font-size: 0.85rem; font-weight: 800; color: var(--success);">${habit.current_streak} ngày 🔥</div>
+                                                <div style="font-size: 0.65rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Chuỗi hiện tại</div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div style="flex: 1;">
+                                            <div style="font-weight: 800; font-size: 1.15rem; color: ${isDone ? 'var(--success)' : 'var(--text-main)'}; margin-bottom: 6px; line-height: 1.2;">${habit.title}</div>
+                                            <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${habit.description || 'Xây dựng kỷ luật tốt mỗi ngày.'}</p>
+                                        </div>
+
+                                        <div style="margin-top: 8px;">
+                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                                <span style="font-size: 0.75rem; font-weight: 800; color: var(--text-light);">TIẾN TRÌNH</span>
+                                                <span style="font-size: 0.75rem; font-weight: 800; color: var(--text-main);">${streakPercent}%</span>
+                                            </div>
+                                            <div style="height: 6px; background: var(--border-color); border-radius: 10px; overflow: hidden;">
+                                                <div style="width: ${streakPercent}%; height: 100%; background: var(--success); border-radius: 10px; box-shadow: 0 0 10px rgba(0, 184, 148, 0.3);"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('') : `<div style="flex: 1; padding: 60px; text-align: center; border: 2px dashed var(--border-color); border-radius: 24px; color: var(--text-light);">
+                                <i class="fas fa-seedling" style="font-size: 2rem; margin-bottom: 12px; display: block; opacity: 0.5;"></i>
+                                <p style="font-weight: 700;">Bạn chưa có thói quen nào.</p>
+                                <p style="font-size: 0.85rem;">Hãy bắt đầu ngay hôm nay!</p>
+                            </div>`}
+                        </div>
                      </div>
                  </div>
 
                 <!-- Bottom Row: Productivity Chart (Stat representation) -->
-                <div style="background: var(--card-bg); border-radius: 20px; border: 1.5px solid var(--border-color); padding: 28px; box-shadow: var(--shadow-sm);">
-                    <h3 style="font-size: 1.5rem; font-weight: 900; display: flex; align-items: center; gap: 16px; margin-bottom: 24px; color: var(--text-main);">
-                        <img src="/increase.png" alt="productivity" style="width: 38px; height: 38px; object-fit: contain;">
-                        Năng suất tuần này
-                    </h3>
+                <div class="dashboard-section-card" style="background: var(--card-bg); border-radius: 28px; border: 1.5px solid var(--border-color); box-shadow: var(--shadow-md); padding: 24px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                        <h3 style="font-size: 1.15rem; font-weight: 900; display: flex; align-items: center; gap: 12px; color: var(--text-main); margin: 0;">
+                            <img src="/increase.png" alt="productivity" style="width: 28px; height: 28px; object-fit: contain;">
+                            Năng suất tuần này
+                        </h3>
+                        <a href="#/statistics" class="btn-all">PHÂN TÍCH <i class="fas fa-arrow-right" style="font-size: 0.65rem;"></i></a>
+                    </div>
+
                     <div style="display: flex; align-items: flex-end; gap: 12px; height: 160px; padding-bottom: 30px; border-bottom: 1.5px solid var(--border-color); margin-top: 20px;">
                         ${(() => {
                             // Find the start of the week (Monday)
@@ -163,13 +188,41 @@ export const renderDashboard = async (container) => {
                     </div>
                 </div>
                 <style>
+                    .stats-grid-compact::-webkit-scrollbar { display: none; }
                     .today-schedule-container::-webkit-scrollbar { display: none; }
+                    .habits-horizontal-container::-webkit-scrollbar { display: none; }
+                    .habit-card:hover { transform: translateY(-8px); box-shadow: 0 16px 32px rgba(0,0,0,0.1); border-color: var(--success); }
+                    .habit-card.done { background-color: rgba(0, 184, 148, 0.05) !important; }
                     .schedule-card:hover { transform: translateY(-8px); box-shadow: 0 16px 32px rgba(0,0,0,0.08); border-color: rgba(255, 167, 38, 0.4); }
                     .schedule-card.done { opacity: 0.6; filter: grayscale(0.5); }
+                    
+                    .btn-all {
+                        font-size: 0.72rem;
+                        color: var(--primary-color);
+                        font-weight: 800;
+                        text-decoration: none;
+                        display: flex !important;
+                        align-items: center;
+                        gap: 8px;
+                        padding: 8px 16px;
+                        background: var(--primary-light);
+                        border-radius: 12px;
+                        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                        border: 1.2px solid transparent;
+                        white-space: nowrap;
+                    }
+                    .btn-all:hover {
+                        background: var(--primary-color);
+                        color: white !important;
+                        transform: translateX(4px);
+                        box-shadow: 0 4px 12px rgba(255, 167, 38, 0.25);
+                    }
+                    
                     @keyframes bounce-top { 
                         0% { transform: translateY(10px); opacity: 0; }
                         100% { transform: translateY(0); opacity: 1; }
                     }
+
                 </style>
             </div>
             `;
@@ -183,13 +236,13 @@ const renderStatCard = (label, value, icon, color) => {
     const displayValue = !isNaN(value) ? Number(value) : value;
     
     return `
-    <div style="background: var(--card-bg); border-radius: 16px; padding: 24px; border: 1px solid var(--border-color); display: flex; align-items: center; gap: 20px; box-shadow: var(--shadow-sm);">
-        <div style="width: 60px; height: 60px; border-radius: 16px; background: rgba(0,0,0,0.04); display: flex; align-items: center; justify-content: center; border: 2px solid ${color}; box-shadow: 0 8px 20px rgba(0,0,0,0.08);">
-            <img src="${icon}" alt="${label} icon" style="width: 32px; height: 32px; object-fit: contain;" />
+    <div class="stat-card-main" style="min-width: 140px;">
+        <div class="stat-card-icon" style="border-color: ${color};">
+            <img src="${icon}" alt="${label} icon" />
         </div>
-        <div style="flex: 1;">
-            <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px;">${label}</div>
-            <div style="font-size: 1.85rem; font-weight: 900; color: var(--text-main); letter-spacing: 0.02em;">${displayValue}</div>
+        <div style="flex: 1; overflow: hidden;">
+            <div class="stat-card-label">${label}</div>
+            <div class="stat-card-value">${displayValue}</div>
         </div>
     </div>
     `;

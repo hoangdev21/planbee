@@ -221,6 +221,25 @@ export const renderSettings = async (container) => {
             };
         }
 
+        // Copy Telegram Token
+        const copyBtn = document.getElementById('copy-telegram-token');
+        if (copyBtn) {
+            copyBtn.onclick = () => {
+                const token = userData.telegram_token;
+                if (!token) return;
+                navigator.clipboard.writeText(token);
+                
+                const originalContent = copyBtn.innerHTML;
+                copyBtn.innerHTML = '<i class="fas fa-check"></i> Đã chép';
+                copyBtn.style.background = '#27ae60';
+                
+                setTimeout(() => {
+                    copyBtn.innerHTML = originalContent;
+                    copyBtn.style.background = 'var(--primary-color)';
+                }, 2000);
+            };
+        }
+
         // Password Form
         const passForm = document.getElementById('pass-form');
         if (passForm) {
@@ -344,6 +363,34 @@ export const renderSettings = async (container) => {
                     </div>
                     <div style="display: flex; justify-content: flex-end;"><button class="btn-save">Lưu thay đổi</button></div>
                 </form>
+
+                <!-- Telegram Linking Section -->
+                <div style="margin-top: 32px; padding: 24px; background: var(--primary-light); border-radius: 20px; border: 1.5px dashed var(--primary-color); position: relative; overflow: hidden;">
+                    <div style="position: absolute; right: -20px; top: -10px; font-size: 5rem; color: var(--primary-color); opacity: 0.05; transform: rotate(15deg);">
+                        <i class="fab fa-telegram"></i>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                        <i class="fab fa-telegram" style="font-size: 1.8rem; color: #0088cc;"></i>
+                        <h4 style="font-weight: 800; color: var(--text-main); margin: 0; font-size: 1.1rem;">Liên kết Telegram Bot 🐝</h4>
+                    </div>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px; font-weight: 600; line-height: 1.5;">
+                        Nhắn cho Bee ID bên dưới để liên kết tài khoản. Sau đó, bạn có thể gửi tin nhắn thoại hoặc văn bản cho Bee trên Telegram để thêm lịch trình tự động!
+                    </p>
+                    <div style="display: flex; gap: 12px; align-items: center;">
+                        <div style="flex: 1; background: var(--card-bg); padding: 14px 16px; border-radius: 14px; border: 1.5px solid var(--border-color); font-family: 'JetBrains Mono', monospace; font-weight: 800; color: var(--primary-color); font-size: 1.3rem; text-align: center; letter-spacing: 3px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);">
+                            ${userData.telegram_token || 'Đang tạo...'}
+                        </div>
+                        <button id="copy-telegram-token" class="btn-save" style="padding: 14px 24px; display: flex; align-items: center; gap: 10px; white-space: nowrap; font-size: 0.9rem;">
+                            <i class="far fa-copy"></i> Sao chép ID
+                        </button>
+                    </div>
+                    <div style="margin-top: 16px; display: flex; align-items: center; gap: 8px;">
+                        <a href="https://t.me/PlanBeeAI_Bot" target="_blank" style="color: #0088cc; font-weight: 800; font-size: 0.85rem; text-decoration: none; display: flex; align-items: center; gap: 4px;">
+                            Mở Telegram <i class="fas fa-external-link-alt" style="font-size: 0.7rem;"></i>
+                        </a>
+                        ${userData.telegram_chat_id ? '<span style="color: var(--success); font-weight: 800; font-size: 0.85rem; display: flex; align-items: center; gap: 4px; margin-left: auto;"><i class="fas fa-check-circle"></i> Đã liên kết</span>' : '<span style="color: var(--text-muted); font-weight: 700; font-size: 0.85rem; margin-left: auto;">Chưa liên kết</span>'}
+                    </div>
+                </div>
             `;
         } else if (activeTab === 'password') {
             return `

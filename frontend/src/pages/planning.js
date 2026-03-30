@@ -63,28 +63,35 @@ const getPlanType = (p) => {
 
 const renderPlanningUI = (container, tasks, habits, plans, params = {}) => {
     container.innerHTML = `
-        <div class="planning-root fade-in" style="display: flex; flex-direction: column; gap: 20px;">
-            <div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 12px; border-bottom: 2px solid var(--border-color);">
-                <div style="display: flex; align-items: center; gap: 24px;">
-                    <h2 style="font-size: 1.8rem; font-weight: 800; color: var(--text-main);">Lập kế hoạch</h2>
-                    <div class="view-selector" style="display: flex; background: var(--input-bg); padding: 5px; border-radius: 12px; border: 1.5px solid var(--border-color);">
+        <div class="planning-root fade-in">
+            <div class="planning-header">
+                <div class="header-main">
+                    <h2 class="page-title">Lập kế hoạch</h2>
+                    <div class="view-selector">
                         <button class="view-btn ${currentView === 'day' ? 'active' : ''}" data-view="day">Ngày</button>
                         <button class="view-btn ${currentView === 'week' ? 'active' : ''}" data-view="week">Tuần</button>
                         <button class="view-btn ${currentView === 'month' ? 'active' : ''}" data-view="month">Tháng</button>
                     </div>
                 </div>
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <button id="add-plan-btn" class="btn btn-primary" style="padding: 12px 24px; font-weight: 800; border-radius: 10px;">
-                        <i class="fas fa-plus"></i> Thêm kế hoạch
+                <div class="header-actions">
+                    <button id="add-plan-btn" class="btn-planning-action btn-add-plan">
+                        <i class="fas fa-plus"></i> Thêm
                     </button>
-                    <div style="width: 1px; height: 30px; background: var(--border-color); margin: 0 8px;"></div>
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <button id="prev-btn" class="btn btn-outline" style="width:40px; height:40px; display:flex; align-items:center; justify-content:center; border-radius: 10px;"><i class="fas fa-chevron-left"></i></button>
-                        <span style="font-size: 1.1rem; font-weight: 800; min-width: 200px; text-align: center; color: var(--text-main);">${getFormattedDateLabel()}</span>
-                        <button id="next-btn" class="btn btn-outline" style="width:40px; height:40px; display:flex; align-items:center; justify-content:center; border-radius: 10px;"><i class="fas fa-chevron-right"></i></button>
+
+
+                    <div class="control-divider hide-mobile"></div>
+                    <div class="date-controls">
+                        <button id="prev-btn" class="btn btn-outline nav-btn" title="Ngày trước">
+                            <i class="fa-solid fa-chevron-left" style="color: #000 !important; font-size: 1.1rem !important;"></i>
+                        </button>
+                        <span class="date-label">${getFormattedDateLabel()}</span>
+                        <button id="next-btn" class="btn btn-outline nav-btn" title="Ngày sau">
+                            <i class="fa-solid fa-chevron-right" style="color: #000 !important; font-size: 1.1rem !important;"></i>
+                        </button>
                     </div>
-                    <button id="today-btn" class="btn btn-outline" style="padding: 10px 20px; font-size: 0.9rem; font-weight: 800; border-radius: 10px;">Hôm nay</button>
+                    <button id="today-btn" class="btn-planning-action btn-today">Hôm nay</button>
                 </div>
+
             </div>
 
             ${renderOverdueBanner(tasks)}
@@ -113,6 +120,50 @@ const renderPlanningUI = (container, tasks, habits, plans, params = {}) => {
             .view-btn.active { background: var(--card-bg); color: var(--primary-color); box-shadow: var(--shadow-sm); }
             .modal-tab-btn.active { background: var(--card-bg); color: var(--primary-color); border-bottom: 3.5px solid var(--primary-color); }
             
+            .planning-root { display: flex; flex-direction: column; gap: 20px; }
+            .planning-header { display: flex; align-items: center; justify-content: flex-start; gap: 40px; padding: 10px 20px 20px; border-bottom: 2px solid var(--border-color); flex-wrap: wrap; }
+            .header-main { display: flex; align-items: center; gap: 24px; }
+            .header-actions { display: flex; align-items: center; gap: 16px; flex-shrink: 0; }
+
+            .date-controls { display: flex; align-items: center; gap: 8px; background: var(--input-bg); padding: 6px 12px; border-radius: 14px; border: 2.5px solid var(--border-color); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+            .date-label { font-size: 1rem; font-weight: 800; min-width: 140px; text-align: center; color: var(--text-main); letter-spacing: -0.2px; }
+            .control-divider { width: 1px; height: 30px; background: var(--border-color); margin: 0 8px; }
+            .nav-btn { width: 36px; height: 36px; display: flex !important; align-items: center !important; justify-content: center !important; border-radius: 10px; background: var(--card-bg) !important; color: var(--text-main) !important; border: 1.5px solid var(--border-color) !important; cursor: pointer; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+            .nav-btn:hover { background: var(--primary-color) !important; color: #fff !important; border-color: var(--primary-color) !important; box-shadow: 0 5px 15px rgba(255, 167, 38, 0.4); transform: translateY(-3px) scale(1.1); }
+            .nav-btn i { color: inherit !important; font-size: 1rem !important; transition: all 0.2s; }
+            .nav-btn:active { transform: translateY(0) scale(0.92); }
+
+            
+            .btn-planning-action {
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                gap: 12px !important;
+                padding: 12px 32px !important; /* increased padding */
+                min-width: 140px !important; /* ensured minimum width */
+                border-radius: 50px !important; /* pill shape */
+                font-weight: 900 !important;
+                font-size: 0.95rem !important;
+                cursor: pointer !important;
+                transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+                white-space: nowrap !important;
+                background-color: #1a1a1a !important;
+                color: #ffffff !important;
+                border: 2px solid #333 !important; /* thicker border */
+                box-shadow: 0 4px 15px rgba(0,0,0,0.2) !important;
+                outline: none !important;
+            }
+
+            .btn-planning-action:hover {
+                background-color: #000000 !important;
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25) !important;
+                border-color: #666 !important;
+            }
+            .btn-planning-action i { color: #ffffff !important; font-size: 0.9rem !important; }
+
+
+
             /* Sharp design for info blocks but with rounded corners inside modal */
             .info-row { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 12px; padding: 16px; border-radius: 14px; background: var(--input-bg); border-left: none; }
             .info-icon { width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; color: var(--primary-color); font-size: 1.1rem; flex-shrink: 0; background: none; box-shadow: none; }
@@ -125,17 +176,94 @@ const renderPlanningUI = (container, tasks, habits, plans, params = {}) => {
             .plan-event { position: absolute; border-left: 4.5px solid rgba(0,0,0,0.15); border-radius: 12px; padding: 8px 12px; color: white; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); transition: transform 0.2s; cursor: pointer; }
             .plan-event:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.15); }
             .plan-event.done { opacity: 0.6; filter: grayscale(0.2); }
+            .modal-action-footer { display:flex; justify-content:space-between; margin-top:24px; padding-top:20px; border-top:1.5px solid var(--border-color); align-items:center; transition: padding 0.3s; }
             .plan-event.done::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, transparent 45%, rgba(255,255,255,0.1) 45%, rgba(255,255,255,0.1) 55%, transparent 55%); background-size: 8px 8px; pointer-events: none; }
             
-            .month-day-cell { border-right: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); min-height: 110px; padding: 10px; cursor: pointer; transition: 0.2s; position: relative; }
-            .month-day-cell:hover { background: rgba(0,0,0,0.012); }
+            .week-view-wrapper { overflow: auto; width: 100%; height: 100%; }
+            .week-view-scroll { min-width: 100%; display: flex; flex-direction: column; position: relative; }
+            .week-view-sticky-time { position: sticky; left: 0; z-index: 101; background: var(--card-bg); border-right: 1.5px solid var(--border-color); }
+            .week-header-cell { min-width: 120px; }
+            
             .month-day-number { font-weight: 800; font-size: 0.95rem; color: var(--text-muted); margin-bottom: 8px; display: block; }
+
             .month-day-number.today { color: var(--primary-color); font-weight: 900; }
+            .month-view-wrapper { height: 100%; width: 100%; overflow: auto; }
+            .month-view-scroll { min-width: 100%; min-height: 100%; display: flex; flex-direction: column; }
+            .month-grid { display: grid; grid-template-columns: repeat(7, minmax(140px, 1fr)); flex: 1; background: var(--card-bg); }
+            .month-day-cell { cursor: pointer; border-right: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); min-height: 120px; padding: 10px; position: relative; transition: all 0.2s; background: var(--card-bg); }
+            .month-day-cell:hover { background: rgba(0,0,0,0.02) !important; z-index: 5; box-shadow: inset 0 0 0 1px var(--primary-color); }
             .month-event-badge { font-size: 0.72rem; font-weight: 800; padding: 4px 8px; border-radius: 6px; color: white; margin-bottom: 3px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; border-left: 3.5px solid rgba(0,0,0,0.15); width: 100%; display: flex; align-items: center; justify-content: space-between; }
             .month-event-badge.done { opacity: 0.6; text-decoration: line-through; }
             .task-pill.done { opacity: 0.5; text-decoration: line-through; filter: grayscale(1); }
             .task-pill.overdue { box-shadow: 0 2px 8px rgba(214,48,49,0.15); animation: pulse-danger 2s infinite; }
             @keyframes pulse-danger { 0% { box-shadow: 0 0 0 0 rgba(214,48,49,0.2); } 70% { box-shadow: 0 0 0 6px rgba(214,48,49,0); } 100% { box-shadow: 0 0 0 0 rgba(214,48,49,0); } }
+
+            @media (max-width: 768px) {
+                .planning-root { gap: 10px; }
+                .planning-header { flex-direction: column; align-items: stretch; gap: 15px; border: none; padding: 10px; }
+                .header-main { flex-direction: column; gap: 12px; align-items: stretch; text-align: center; }
+                .page-title { font-size: 1.5rem !important; margin: 0 0 5px 0 !important; text-align: center; width: 100%; }
+                .header-actions { 
+                    display: grid !important; 
+                    grid-template-areas: 
+                        "add today"
+                        "date date";
+                    grid-template-columns: 1fr 1fr;
+                    gap: 12px;
+                    width: 100%;
+                }
+                .btn-add-plan { grid-area: add; }
+                .btn-today { grid-area: today; }
+                .date-controls { grid-area: date; width: 100% !important; min-width: unset; margin: 0; }
+                .control-divider { display: none; }
+                
+                .view-selector { width: 100%; display: flex; justify-content: space-between; background: var(--input-bg); padding: 4px; border-radius: 10px; }
+
+
+                .view-btn { flex: 1; padding: 6px; font-size: 0.75rem; }
+                .hide-mobile { display: none !important; }
+                
+                .add-plan-mobile { display: none !important; } /* Simplify mobile header by using desktop FAB if exists elsewhere or we add one later */
+                .control-divider { display: none !important; }
+
+                #calendar-view-container { 
+                    height: calc(100vh - 140px) !important; 
+                    border-radius: 20px 20px 0 0 !important; 
+                    border-bottom: none !important;
+                    margin-bottom: -30px !important; /* Move closer to bottom */
+                }
+                .time-label { width: 50px !important; font-size: 0.65rem !important; }
+                .plan-event .event-title { font-size: 0.85rem !important; }
+                
+                .day-view-top { padding: 8px 12px !important; }
+                .habit-pill { font-size: 0.65rem !important; padding: 4px 10px !important; }
+                
+                .week-view-wrapper { cursor: grab; -webkit-overflow-scrolling: touch; }
+                .week-view-scroll { min-width: 1300px; }
+                /* Overwrite sticky bg for mobile for consistency */
+                .week-view-sticky-time { background: var(--card-bg) !important; box-shadow: 2px 0 10px rgba(0,0,0,0.02); }
+
+                
+                #plan-modal .modal-content { 
+                    max-width: 100% !important; 
+                    margin: 0 !important; 
+                    position: fixed !important; 
+                    bottom: 0 !important; 
+                    left: 0 !important; 
+                    right: 0 !important; 
+                    border-radius: 30px 30px 0 0 !important; 
+                    min-height: auto !important;
+                    max-height: 85vh;
+                    overflow-y: auto;
+                }
+                .info-row { padding: 12px !important; gap: 10px !important; }
+                .info-value { font-size: 0.8rem !important; }
+                .modal-action-footer { padding-right: 70px !important; }
+                
+                .month-view-wrapper { overflow: auto; width: 100%; height: 100%; -webkit-overflow-scrolling: touch; }
+                .month-view-scroll { min-width: 800px; display: flex; flex-direction: column; position: relative; }
+                .month-day-cell { min-height: 120px !important; }
+            }
         </style>
     `;
 
@@ -161,7 +289,7 @@ const renderPlanningUI = (container, tasks, habits, plans, params = {}) => {
                         <div class="info-row"><div class="info-icon" style="color:${item.color}"><i class="fas fa-palette"></i></div><div><div class="info-label">MÀU SẮC</div><div style="width:18px; height:18px; border-radius:4px; background:${item.color}; margin-top:2px;"></div></div></div>
                     </div>
                     <div class="info-row" style="align-items:flex-start;"><div class="info-icon"><i class="fas fa-align-left"></i></div><div style="flex:1;"><div class="info-label">MÔ TẢ CHI TIẾT</div><div class="info-value" style="font-weight:500; font-size:0.88rem;">${item.description || 'Chưa có mô tả thêm cho kế hoạch này.'}</div></div></div>
-                    <div style="display:flex; justify-content:space-between; margin-top:24px; padding-top:20px; border-top:1.5px solid var(--border-color); align-items:center;">
+                    <div class="modal-action-footer">
                         <button id="delete-btn" style="color:var(--danger); font-weight:800; border:none; background:none; cursor:pointer; font-size:0.8rem; text-transform:uppercase;"><i class="fas fa-trash-alt"></i> Xóa lịch</button>
                         <div style="display:flex; gap:12px;">
                             ${item.status !== 'completed' ? `<button id="complete-btn" class="btn btn-primary" style="padding:10px 30px; border-radius:12px; font-weight:800; font-size:0.85rem; background: #4CAF50;">Hoàn Thành</button>` : `<span style="color:#4CAF50; font-weight:800; font-size:0.9rem;"><i class="fas fa-check-circle"></i> ĐÃ HOÀN THÀNH</span>`}
@@ -301,10 +429,12 @@ const renderDayView = (t, h, p) => {
     const dayTasks = t.filter(x => (x.due_date && x.due_date.startsWith(ds)) || (x.status !== 'completed' && x.due_date && new Date(x.due_date) < new Date()));
     const allday = dayPlans.filter(x => getPlanType(x) === 'all-day'), hourly = dayPlans.filter(x => getPlanType(x) === 'hourly');
     
-    let html = `<div style="padding:16px 24px; border-bottom:2px solid var(--border-color); background:var(--sidebar-bg); display:flex; flex-direction:column; gap:12px;">
+    let html = `<div class="day-view-top" style="padding:16px 24px; border-bottom:2px solid var(--border-color); background:var(--sidebar-bg); display:flex; flex-direction:column; gap:12px;">
         <div style="display:flex; gap:10px; align-items:center;">
-            <small style="font-weight:900; opacity:0.6;">THÓI QUEN:</small>
-            ${h.map(x=>`<div class="habit-pill ${x.last_completed&&x.last_completed.startsWith(ds)?'done':'not-done'}">${x.title}</div>`).join('')}
+            <small style="font-weight:900; opacity:0.6; white-space:nowrap;">THÓI QUEN:</small>
+            <div style="display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; -ms-overflow-style:none; scrollbar-width:none;">
+                ${h.map(x=>`<div class="habit-pill ${x.last_completed&&x.last_completed.startsWith(ds)?'done':'not-done'}">${x.title}</div>`).join('')}
+            </div>
         </div>
         ${dayTasks.length > 0 ? `
             <div style="display:flex; gap:14px; align-items:center; flex-wrap:wrap;">
@@ -343,53 +473,86 @@ const renderDayView = (t, h, p) => {
 
 const renderWeekView = (t, h, p) => {
     const start = getStartOfWeek(currentDate), rowH = 60, weeklyAllDay = p.filter(x => getPlanType(x) === 'all-day');
-    let header = `<div style="display:grid; grid-template-columns: 80px repeat(7, 1fr); border-bottom:1.5px solid var(--border-color); position:sticky; top:0; z-index:100; background:var(--card-bg);"><div style="border-right:1px solid var(--border-color)"></div>${['T2','T3','T4','T5','T6','T7','CN'].map((l,i)=>{const d=new Date(start); d.setDate(start.getDate()+i); const active=formatDateToYYYYMMDD(d)===formatDateToYYYYMMDD(new Date()); return `<div style="padding:10px; text-align:center; border-right:1px solid var(--border-color); ${active?'background:var(--primary-light); color:var(--primary-color);':''}"><small style="opacity:0.6; font-weight:800">${l}</small><div style="font-weight:900; font-size:1.1rem">${d.getDate()}</div></div>`;}).join('')}</div>`;
-    let alldayS = `<div style="display:grid; grid-template-columns: 80px repeat(7, 1fr); border-bottom:2px solid var(--border-color); background:var(--sidebar-bg); min-height:48px; padding:8px 0;"><div style="border-right:1px solid var(--border-color); display:flex; align-items:center; justify-content:center;"><i class="fas fa-layer-group" style="opacity:0.3; font-size:0.9rem;"></i></div>${Array(7).fill(0).map((_,i)=>{
-        const d = new Date(start); d.setDate(start.getDate()+i); const ds = formatDateToYYYYMMDD(d); 
-        const dayA = weeklyAllDay.filter(x=>ds>=formatDateToYYYYMMDD(x.start_time)&&ds<=formatDateToYYYYMMDD(x.end_time));
-        const dayT = t.filter(x => x.due_date && formatDateToYYYYMMDD(x.due_date) === ds);
-        return `<div style="border-right:1px solid var(--border-color); padding:0 6px; display:flex; flex-direction:column; gap:4px;">
-            ${dayT.map(x => `<div class="task-pill task-event ${x.status==='completed'?'done':''}" data-id="${x.id}" style="width:100%; font-size:0.6rem; padding:2px 6px; border-radius:4px; background:rgba(108,92,231,0.1); color:#6c5ce7; border-left:2.5px solid #6c5ce7; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${x.title}</div>`).join('')}
-            ${dayA.map(x=>{const s=formatDateToYYYYMMDD(x.start_time)===ds, e=formatDateToYYYYMMDD(x.end_time)===ds; return `<div class="allday-pill" data-id="${x.id}" style="background:${x.color}; width:100%; font-size:0.65rem; border-radius:${s?'20px 0 0 20px':e?'0 20px 20px 0':'0'}; border-left:${s?'3px solid rgba(0,0,0,0.15)':'none'}; box-shadow:none;">${s?x.title:'&nbsp;'}</div>`;}).join('')}
-        </div>`;
-    }).join('')}</div>`;
-    let grid = `<div class="calendar-grid-scroll" style="display:grid; grid-template-columns: 80px repeat(7, 1fr); overflow-y:auto; flex:1; position:relative; max-height:${24 * rowH}px;"><div>${Array(24).fill(0).map((_,h)=>`<div style="height:${rowH}px; border-bottom:1px solid var(--border-color); text-align:right; padding:12px; font-size:0.75rem; color:var(--text-muted); font-weight:800">${h}:00</div>`).join('')}</div>${Array(7).fill(0).map((_,i)=>{const ds=formatDateToYYYYMMDD(new Date(new Date(start).setDate(start.getDate()+i))); return `<div style="position:relative; border-right:1px solid var(--border-color);">${Array(24).fill(0).map(()=>`<div style="height:${rowH}px; border-bottom:1px solid var(--border-color)"></div>`).join('')}${p.filter(x=>getPlanType(x)==='hourly'&&formatDateToYYYYMMDD(x.start_time) === ds).map(x=>{const s=new Date(x.start_time),e=new Date(x.end_time); const top=(s.getHours()*rowH)+(s.getMinutes()*(rowH/60))+4; let dur=(e-s)/60000; const dE=new Date(s); dE.setHours(23,59,59,999); if(e>dE) dur=(dE-s)/60000; const height=Math.max(dur*(rowH/60)-8, 40),done=x.status==='completed'; return `<div class="plan-event ${done?'done':''}" data-id="${x.id}" style="top:${top}px; height:${height}px; width:calc(100% - 10px); left:5px; background:${x.color};"><div style="font-size: 0.72rem; font-weight: 900; opacity: 0.85; margin-bottom: 4px; display:flex; align-items:center; justify-content:space-between;"><section><i class="far fa-clock"></i> ${s.getHours()}:${s.getMinutes().toString().padStart(2,'0')} - ${e.getHours()}:${e.getMinutes().toString().padStart(2,'0')}</section>${done?'<img src="/complete.png" style="width:16px; height:16px; object-fit:contain;">':''}</div><div style="font-size:0.92rem; font-weight:900; line-height:1.2; margin-bottom:4px;">${x.title}</div><div style="font-size:0.75rem; font-weight:500; opacity:0.8; line-height:1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${x.description || ''}</div></div>`;}).join('')}</div>`;}).join('')}</div>`;
-    return `<div style="height:100%; display:flex; flex-direction:column; overflow:hidden;">${header}${alldayS}${grid}</div>`;
+    let header = `<div style="display:grid; grid-template-columns: 80px repeat(7, minmax(160px, 1fr)); border-bottom:1.5px solid var(--border-color); position:sticky; top:0; z-index:100; background:var(--card-bg);">
+        <div class="week-view-sticky-time" style="background:var(--card-bg); position:sticky; left:0; z-index:102;"></div>
+        ${['T2','T3','T4','T5','T6','T7','CN'].map((l,i)=>{
+            const d=new Date(start); d.setDate(start.getDate()+i); 
+            const active=formatDateToYYYYMMDD(d)===formatDateToYYYYMMDD(new Date()); 
+            return `<div style="padding:10px; text-align:center; border-right:1px solid var(--border-color); ${active?'background:var(--primary-light); color:var(--primary-color);':''}"><small style="opacity:0.6; font-weight:800">${l}</small><div style="font-weight:900; font-size:1.1rem">${d.getDate()}</div></div>`;
+        }).join('')}
+    </div>`;
+    
+    let alldayS = `<div style="display:grid; grid-template-columns: 80px repeat(7, minmax(160px, 1fr)); border-bottom:2px solid var(--border-color); background:var(--sidebar-bg); min-height:48px; padding:8px 0;">
+        <div class="week-view-sticky-time" style="display:flex; align-items:center; justify-content:center; background:var(--sidebar-bg); position:sticky; left:0; z-index:102;"><i class="fas fa-layer-group" style="opacity:0.3; font-size:0.9rem;"></i></div>
+        ${Array(7).fill(0).map((_,i)=>{
+            const d = new Date(start); d.setDate(start.getDate()+i); const ds = formatDateToYYYYMMDD(d); 
+            const dayA = weeklyAllDay.filter(x=>ds>=formatDateToYYYYMMDD(x.start_time)&&ds<=formatDateToYYYYMMDD(x.end_time));
+            const dayT = t.filter(x => x.due_date && formatDateToYYYYMMDD(x.due_date) === ds);
+            return `<div style="border-right:1px solid var(--border-color); padding:0 6px; display:flex; flex-direction:column; gap:4px;">
+                ${dayT.map(x => `<div class="task-pill task-event ${x.status==='completed'?'done':''}" data-id="${x.id}" style="width:100%; font-size:0.6rem; padding:2px 6px; border-radius:4px; background:rgba(108,92,231,0.1); color:#6c5ce7; border-left:2.5px solid #6c5ce7; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${x.title}</div>`).join('')}
+                ${dayA.map(x=>{const s=formatDateToYYYYMMDD(x.start_time)===ds, e=formatDateToYYYYMMDD(x.end_time)===ds; return `<div class="allday-pill" data-id="${x.id}" style="background:${x.color}; width:100%; font-size:0.65rem; border-radius:${s?'20px 0 0 20px':e?'0 20px 20px 0':'0'}; border-left:${s?'3px solid rgba(0,0,0,0.15)':'none'}; box-shadow:none;">${s?x.title:'&nbsp;'}</div>`;}).join('')}
+            </div>`;
+        }).join('')}
+    </div>`;
+    
+    let grid = `<div class="calendar-grid-body" style="display:grid; grid-template-columns: 80px repeat(7, minmax(160px, 1fr)); position:relative;">
+        <div class="week-view-sticky-time" style="background:var(--card-bg); position:sticky; left:0; z-index:90;">${Array(24).fill(0).map((_,h)=>`<div style="height:${rowH}px; border-bottom:1px solid var(--border-color); text-align:right; padding:12px; font-size:0.75rem; color:var(--text-muted); font-weight:800">${h}:00</div>`).join('')}</div>
+        ${Array(7).fill(0).map((_,i)=>{
+            const ds=formatDateToYYYYMMDD(new Date(new Date(start).setDate(start.getDate()+i))); 
+            return `<div style="position:relative; border-right:1px solid var(--border-color);">${Array(24).fill(0).map(()=>`<div style="height:${rowH}px; border-bottom:1px solid var(--border-color)"></div>`).join('')}${p.filter(x=>getPlanType(x)==='hourly'&&formatDateToYYYYMMDD(x.start_time) === ds).map(x=>{const s=new Date(x.start_time),e=new Date(x.end_time); const top=(s.getHours()*rowH)+(s.getMinutes()*(rowH/60))+4; let dur=(e-s)/60000; const dE=new Date(s); dE.setHours(23,59,59,999); if(e>dE) dur=(dE-s)/60000; const height=Math.max(dur*(rowH/60)-8, 40),done=x.status==='completed'; return `<div class="plan-event ${done?'done':''}" data-id="${x.id}" style="top:${top}px; height:${height}px; width:100%; left:0; background:${x.color};"><div style="font-size: 0.65rem; font-weight: 900; opacity: 0.85; margin-bottom: 2px; display:flex; align-items:center; justify-content:space-between;"><section><i class="far fa-clock"></i> ${s.getHours()}:${s.getMinutes().toString().padStart(2,'0')}</section>${done?'<img src="/complete.png" style="width:14px; height:14px; object-fit:contain;">':''}</div><div style="font-size:0.75rem; font-weight:900; line-height:1.1; word-break:break-all;">${x.title}</div></div>`;}).join('')}</div>`;
+        }).join('')}
+    </div>`;
+    
+    return `<div class="week-view-wrapper"><div class="week-view-scroll">${header}${alldayS}${grid}</div></div>`;
 };
 
 const renderMonthView = (tasks, habits, plans) => {
-    const s = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1), end = new Date(currentDate.getFullYear(), currentDate.getMonth()+1, 0);
-    const startDay = s.getDay() === 0 ? 6 : s.getDay() - 1;
-    let header = `<div style="display:grid; grid-template-columns:repeat(7, 1fr); background:var(--sidebar-bg); border-bottom:2px solid var(--border-color);">${['T2','T3','T4','T5','T6','T7','CN'].map(l=>(`<div style="padding:14px; text-align:center; font-size:0.85rem; font-weight:900; color:var(--text-muted)">${l}</div>`)).join('')}</div>`;
-    let body = `<div style="display:grid; grid-template-columns:repeat(7, 1fr); height:100%; border-left:1px solid var(--border-color);">`;
-    for(let i=0; i<startDay; i++) body += `<div style="border-right: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); background:rgba(0,0,0,0.012); height: 110px;"></div>`;
-    for(let d=1; d<=end.getDate(); d++) {
-        const d_obj = new Date(currentDate.getFullYear(), currentDate.getMonth(), d);
-        const ds = formatDateToYYYYMMDD(d_obj), active = ds === formatDateToYYYYMMDD(new Date());
+    const year = currentDate.getFullYear(), month = currentDate.getMonth();
+    const start = new Date(year, month, 1), end = new Date(year, month + 1, 0);
+    const startDay = start.getDay() === 0 ? 6 : start.getDay() - 1;
+    const totalDays = end.getDate();
+    const todayStr = formatDateToYYYYMMDD(new Date());
+
+    let header = `<div style="display:grid; grid-template-columns:repeat(7, minmax(140px, 1fr)); background:var(--sidebar-bg); border-bottom:1.5px solid var(--border-color); position:sticky; top:0; z-index:100;">
+        ${['T2','T3','T4','T5','T6','T7','CN'].map(l=>(`<div style="padding:15px; text-align:center; font-size:0.8rem; font-weight:900; color:var(--text-main); opacity:0.9;">${l}</div>`)).join('')}
+    </div>`;
+
+
+    let cells = [];
+    // Padding days
+    for(let i=0; i<startDay; i++) cells.push(`<div style="border-right: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); background:rgba(0,0,0,0.012); min-height: 120px;"></div>`);
+    
+    // Actual days
+    for(let d=1; d<=totalDays; d++) {
+        const ds = formatDateToYYYYMMDD(new Date(year, month, d)), active = ds === todayStr;
         const dayP = plans.filter(p => ds >= formatDateToYYYYMMDD(p.start_time) && ds <= formatDateToYYYYMMDD(p.end_time));
         const dayT = tasks.filter(t => t.due_date && formatDateToYYYYMMDD(t.due_date) === ds);
-        const allDayItems = [
-            ...dayT.map(x => ({ ...x, displayType: 'task' })),
-            ...dayP.map(x => ({ ...x, displayType: 'plan' }))
-        ];
-        body += `<div class="month-day-cell" data-date="${ds}"><span class="month-day-number ${active?'today':''}">${d}</span><div class="month-indicator-container">
-            ${allDayItems.slice(0,3).map(item=>{ 
-                const done=item.status==='completed'; 
-                const icon = item.displayType === 'task' ? '<i class="fas fa-check-double" style="font-size:0.6rem;"></i> ' : '';
-                const color = item.displayType === 'task' ? '#6c5ce7' : item.color;
-                const bg = item.displayType === 'task' ? 'rgba(108,92,231,0.1)' : item.color;
-                const textColor = item.displayType === 'task' ? '#6c5ce7' : 'white';
-                const border = item.displayType === 'task' ? `1px solid ${color}44` : 'none';
-                
-                return `<div class="${item.displayType==='task'?'task-event':'month-event-badge'} ${done?'done':''}" data-id="${item.id}" style="background:${bg}; color:${textColor}; border:${border}; font-size: 0.72rem; font-weight: 800; padding: 4px 8px; border-radius: 6px; margin-bottom: 3px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; border-left: 3.5px solid ${item.displayType==='task'?color:'rgba(0,0,0,0.15)'}; width: 100%; display: flex; align-items: center; justify-content: space-between;">
-                    <section style="overflow:hidden; text-overflow:ellipsis;">${icon}${item.title}</section>
-                    ${done?' <img src="/complete.png" style="width:12px; height:12px; object-fit:contain;">':''}
-                </div>`
-            }).join('')}
-            ${allDayItems.length>3?`<div style="font-size:0.65rem; font-weight:800; color:var(--text-light); text-align:center;">+ ${allDayItems.length-3} mục khác</div>`:''}</div></div>`;
+        const allItems = [...dayT.map(x=>({...x, type:'task'})), ...dayP.map(x=>({...x, type:'plan'}))];
+        
+        cells.push(`
+            <div class="month-day-cell" style="cursor:pointer; border-right:1px solid var(--border-color); border-bottom:1px solid var(--border-color); min-height:140px; padding:12px; position:relative; background:${active?'var(--primary-light)':'var(--card-bg)'};" onclick="currentDate = new Date(${year}, ${month}, ${d}); currentView='day'; renderPlanningUI(window.planningContainer, window.lastTasks, window.lastHabits, window.lastPlans);">
+                <span style="position:absolute; top:10px; right:12px; font-weight:900; font-size:0.95rem; opacity:${active?1:0.6}; color:${active?'var(--primary-color)':'var(--text-main)'};">${d}</span>
+
+                <div style="margin-top:24px; display:flex; flex-direction:column; gap:4px; overflow:hidden;">
+
+                    ${allItems.slice(0,4).map(item => {
+                        const done = item.status === 'completed';
+                        const color = item.type === 'task' ? '#6c5ce7' : (item.color || '#FFA726');
+                        return `<div class="${item.type==='task'?'task-event':'month-event-badge'} ${done?'done':''}" data-id="${item.id}" style="background:${item.type==='task'?'rgba(108,92,231,0.08)':color}; color:${item.type==='task'?color:'white'}; font-size:0.65rem; border-radius:5px; padding:3px 6px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; border-left:3px solid ${color}; border:${item.type==='task'?`1px solid ${color}33`:'none'};">
+                            ${item.type==='task'?'<i class="fas fa-check-double" style="font-size:0.6rem"></i> ':''}${item.title}
+                        </div>`;
+                    }).join('')}
+                    ${allItems.length > 4 ? `<div style="font-size:0.6rem; font-weight:800; color:var(--text-muted); text-align:center;">+ ${allItems.length - 4} khác</div>` : ''}
+                </div>
+            </div>
+        `);
     }
-    const rem = (startDay + end.getDate()) % 7 === 0 ? 0 : 7 - ((startDay + end.getDate()) % 7);
-    for(let i=0; i<rem; i++) body += `<div style="border-right: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); background:rgba(0,0,0,0.012); height: 110px;"></div>`;
-    return `<div style="height:100%; display:flex; flex-direction:column;">${header}${body}</div></div>`;
+
+    // Remaining empty cells
+    const rem = (startDay + totalDays) % 7 === 0 ? 0 : 7 - ((startDay + totalDays) % 7);
+    for(let i=0; i<rem; i++) cells.push(`<div style="border-right: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); background:rgba(0,0,0,0.012); min-height: 120px;"></div>`);
+
+    return `<div class="month-view-wrapper"><div class="month-view-scroll">${header}<div class="month-grid">${cells.join('')}</div></div></div>`;
+
 };
 window.renderPlanning = renderPlanning; window.currentDate = currentDate; window.currentView = currentView;

@@ -27,9 +27,10 @@ const authController = {
             const hashedPassword = await bcrypt.hash(password, 10);
 
             // Insert user
+            const telegram_token = "BEE-" + Math.random().toString(36).substr(2, 9).toUpperCase();
             const [result] = await db.execute(
-                'INSERT INTO users (username, email, password) VALUES (?, ?, ?)',
-                [username, email, hashedPassword]
+                'INSERT INTO users (username, email, password, telegram_token) VALUES (?, ?, ?, ?)',
+                [username, email, hashedPassword, telegram_token]
             );
 
             const userId = result.insertId;
@@ -122,7 +123,7 @@ const authController = {
     getProfile: async (req, res) => {
         try {
             const [users] = await db.execute(
-                'SELECT id, username, email, full_name, bio, profile_image, created_at FROM users WHERE id = ?',
+                'SELECT id, username, email, full_name, bio, profile_image, created_at, telegram_token, telegram_chat_id FROM users WHERE id = ?',
                 [req.user.id]
             );
 
