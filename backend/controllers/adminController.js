@@ -11,19 +11,27 @@ const adminController = {
             const [[taskCount]] = await db.execute('SELECT COUNT(*) as total FROM tasks');
             const [[planCount]] = await db.execute('SELECT COUNT(*) as total FROM plans');
             const [[habitCount]] = await db.execute('SELECT COUNT(*) as total FROM habits');
+            const [[chatCount]] = await db.execute('SELECT COUNT(*) as total FROM chat_logs');
+            const [[errorCount]] = await db.execute('SELECT COUNT(*) as total FROM error_logs');
+            const [[premiumCount]] = await db.execute('SELECT COUNT(*) as total FROM users WHERE account_type = "premium"');
+            const [[activeTasks]] = await db.execute('SELECT COUNT(*) as total FROM tasks WHERE created_at >= NOW() - INTERVAL 1 DAY');
             
             const tasksPerUser = userCount.total > 0 ? (taskCount.total / userCount.total).toFixed(1) : 0;
-            
-            // 3. AI Key Status (Simulated based on groqKeys count)
-            const groqCount = 7; // As defined in aiController
+            const aiController = require('./aiController');
+            const groqCount = aiController.getGroqStats ? aiController.getGroqStats().length : 7;
 
             res.json({
                 growth: growth.reverse(),
                 summary: {
                     totalUsers: userCount.total,
+                    premiumUsers: premiumCount.total,
                     avgTasks: tasksPerUser,
+                    totalTasks: taskCount.total,
                     totalPlans: planCount.total,
                     totalHabits: habitCount.total,
+                    totalAIInteractions: chatCount.total,
+                    systemErrors: errorCount.total,
+                    activeTasks24h: activeTasks.total,
                     aiKeysStatus: `${groqCount} Active`
                 }
             });
@@ -41,12 +49,52 @@ const adminController = {
         }
     },
 
+    createUser: async (req, res) => {
+        try {
+            const { username, email, password, role, account_type, is_active } = req.body;
+            
+            if (!username || !email || !password) {
+                return res.status(400).json({ message: 'Vui lòng điền đầy đủ username, email và mật khẩu!' });
+            }
+
+            const [existing] = await db.execute('SELECT * FROM users WHERE email = ? OR username = ?', [email, username]);
+            if (existing.length > 0) {
+                return res.status(400).json({ message: 'Tên người dùng hoặc email đã tồn tại!' });
+            }
+
+            const bcrypt = require('bcryptjs');
+            const hashedPassword = await bcrypt.hash(password, 10);
+            const telegram_token = "BEE-" + Math.random().toString(36).substr(2, 9).toUpperCase();
+            
+            const [result] = await db.execute(
+                'INSERT INTO users (username, email, password, telegram_token, role, account_type, is_active) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                [username, email, hashedPassword, telegram_token, role || 'user', account_type || 'free', is_active !== undefined ? is_active : 1]
+            );
+            
+            await db.execute('INSERT INTO user_settings (user_id, theme) VALUES (?, ?)', [result.insertId, 'light']);
+            
+            res.status(201).json({ message: 'Tạo tài khoản mới thành công!' });
+        } catch (error) {
+            console.error('Create user error:', error);
+            res.status(500).json({ message: error.message });
+        }
+    },
+
     updateUser: async (req, res) => {
         const { id } = req.params;
         const { role, account_type, is_active } = req.body;
         try {
             await db.execute('UPDATE users SET role = ?, account_type = ?, is_active = ? WHERE id = ?', [role, account_type, is_active, id]);
             res.json({ message: 'User updated successfully' });
+        } catch (error) {
+            res.status(500).json({ message: error.message });
+        }
+    },
+
+    getAIKeysStatus: async (req, res) => {
+        try {
+            const aiController = require('./aiController');
+            res.json(aiController.getGroqStats());
         } catch (error) {
             res.status(500).json({ message: error.message });
         }

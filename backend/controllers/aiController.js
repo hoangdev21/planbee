@@ -15,6 +15,7 @@ const groqKeys = [
 ].filter(k => k && k.trim() !== '');
 
 let currentKeyIndex = 0;
+const groqKeyStats = {}; // Tracks { remainingReqs, limitReqs, remainingTokens, limitTokens } per key index
 
 async function fetchWithRotation(body) {
     if (groqKeys.length === 0) {
@@ -36,6 +37,21 @@ async function fetchWithRotation(body) {
                 },
                 body: JSON.stringify(body)
             });
+
+            const reqRem = response.headers.get('x-ratelimit-remaining-requests');
+            const reqLim = response.headers.get('x-ratelimit-limit-requests');
+            const tokRem = response.headers.get('x-ratelimit-remaining-tokens');
+            const tokLim = response.headers.get('x-ratelimit-limit-tokens');
+
+            if (reqRem) {
+                groqKeyStats[index] = {
+                    remainingReqs: parseInt(reqRem, 10),
+                    limitReqs: reqLim ? parseInt(reqLim, 10) : 14400,
+                    remainingTokens: tokRem ? parseInt(tokRem, 10) : 100000,
+                    limitTokens: tokLim ? parseInt(tokLim, 10) : 100000,
+                    lastUpdated: Date.now()
+                };
+            }
 
             const data = await response.json();
 
@@ -71,6 +87,36 @@ async function fetchWithRotation(body) {
 }
 
 const aiController = {
+    getGroqStats: () => {
+        const statsArray = [];
+        // Giả sử có 7 config slot (process.env.GROQ_API_KEY_1 đến 7)
+        // Mình sẽ xuất ra cả 7 nhưng với trạng thái cho từng slot
+        const totalSlots = 7;
+        for (let i = 0; i < totalSlots; i++) {
+            const k = process.env[`GROQ_API_KEY_${i + 1}`];
+            const isActive = k && k.trim();
+            
+            // Nếu có thống kê thật từ API => dùng nó. Nếu không => mặc định limit 14400.
+            const stats = groqKeyStats[i] || {
+                remainingReqs: isActive ? 14400 : 0,
+                limitReqs: isActive ? 14400 : 0,
+                remainingTokens: isActive ? 100000 : 0,
+                limitTokens: isActive ? 100000 : 0
+            };
+            
+            statsArray.push({
+                id: i + 1,
+                maskedKey: isActive ? `${k.substring(0, 8)}********${k.substring(k.length - 4)}` : 'Chưa cấu hình (Not Configured)',
+                status: isActive ? 'active' : 'inactive',
+                remainingReqs: stats.remainingReqs,
+                limitReqs: stats.limitReqs,
+                remainingTokens: stats.remainingTokens,
+                limitTokens: stats.limitTokens
+            });
+        }
+        return statsArray;
+    },
+
     chat: async (req, res) => {
         const { message, history } = req.body;
         const userId = req.user.id;
@@ -131,7 +177,7 @@ ${plansStr || 'Trống'}
 - Habits:
 ${habitsStr || 'Trống'}
 
-LƯU Ý: Tuyệt đối bảo mật ID [id:...]. Thẻ hành động [] (nếu có) luôn xếp ở cuối cùng sau lời chào/xác nhận.
+LƯU Ý: Tuyệt đối bảo mật ID [id:...]. Bạn hiện đang sử dụng công cụ (tools) thay vì thẻ hành động trong text. Tuyệt đối không in ra các thẻ như [].
 ${platform === 'telegram' ? 'TRẢ LỜI TRÊN TELEGRAM: Hãy trả lời cực kỳ ngắn gọn, rõ ràng. Không dùng markdown quá phức tạp.' : ''}
 `;
 
@@ -283,6 +329,11 @@ ${platform === 'telegram' ? 'TRẢ LỜI TRÊN TELEGRAM: Hãy trả lời cực 
                 finalResponse = secondaryData.choices[0].message.content;
             } else {
                 finalResponse = messageObj.content;
+            }
+
+            // Dọn dẹp lỗi output dư thừa (nếu có)
+            if (finalResponse) {
+                finalResponse = finalResponse.replace(/\[\]/g, '').trim();
             }
 
             // 2. LOG CHAT

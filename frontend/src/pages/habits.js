@@ -143,8 +143,15 @@ const updateHabitsUI = (container) => {
                 </div>
             ` : `
                 <div class="empty-state-illust">
-                    <img src="/bee.png" style="width: 100px; opacity: 0.2;">
-                    <p>Chuỗi kỷ luật đang chờ bạn...</p>
+                    <div class="bee-hover-container">
+                        <img class="flying-bee" src="/bee.png" alt="Bee Mascot">
+                        <div class="bee-shadow"></div>
+                    </div>
+                    <h3 style="font-size: 1.5rem; font-weight: 900; color: #1e293b; margin-bottom: 12px; letter-spacing: -0.5px;">Chưa Có Thói Quen Nào</h3>
+                    <p class="empty-text">Chú ong PlanBee đang chờ bạn đó! Hãy bắt đầu thiết lập kỷ luật và chinh phục 1% mỗi ngày ngay hôm nay.</p>
+                    <button class="btn-create-master empty-create-btn" onclick="document.getElementById('show-habit-modal').click()">
+                        <i class="fas fa-plus-circle"></i> THIẾT LẬP KỶ LUẬT
+                    </button>
                 </div>
             `}
 
@@ -293,6 +300,43 @@ const updateHabitsUI = (container) => {
             }
             @media (max-width: 900px) { .habits-grid-premium { grid-template-columns: repeat(2, 1fr); } }
             @media (max-width: 480px) { .habits-grid-premium { grid-template-columns: 1fr; } }
+            
+            /* Empty State Animations & Layout */
+            .empty-state-illust { 
+                display: flex; flex-direction: column; align-items: center; justify-content: center; 
+                padding: 80px 20px; text-align: center; margin: 20px auto; max-width: 600px;
+                background: linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.6) 100%);
+                border-radius: 32px; border: 2px dashed rgba(255, 167, 38, 0.2);
+            }
+            .bee-hover-container { position: relative; width: 160px; height: 180px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; margin-bottom: 24px; }
+            .flying-bee { 
+                width: 110px; object-fit: contain; z-index: 2; 
+                animation: floatBeeSmooth 3.5s ease-in-out infinite, bzzShake 8s infinite;
+                filter: drop-shadow(0 15px 15px rgba(255, 167, 38, 0.15));
+            }
+            .bee-shadow { 
+                width: 60px; height: 10px; background: rgba(0,0,0,1); border-radius: 50%; opacity: 0.15; filter: blur(4px); 
+                animation: shadowPulse 3.5s ease-in-out infinite; margin-top: 15px; position: absolute; bottom: 0;
+            }
+            .empty-text { font-size: 0.95rem; font-weight: 600; color: var(--text-muted); margin-bottom: 32px; max-width: 320px; line-height: 1.6; }
+            .empty-create-btn { padding: 16px 36px; font-size: 0.95rem; border-radius: 20px; box-shadow: 0 10px 25px rgba(255, 167, 38, 0.3); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+            .empty-create-btn:hover { transform: translateY(-4px) scale(1.02); box-shadow: 0 15px 35px rgba(255, 167, 38, 0.4); }
+
+            @keyframes floatBeeSmooth {
+                0%, 100% { transform: translateY(8px) rotate(-3deg); }
+                50% { transform: translateY(-20px) rotate(4deg); }
+            }
+            @keyframes bzzShake {
+                0%, 95%, 100% { margin-left: 0; }
+                96% { margin-left: -3px; }
+                97% { margin-left: 3px; }
+                98% { margin-left: -3px; }
+                99% { margin-left: 3px; }
+            }
+            @keyframes shadowPulse {
+                0%, 100% { transform: scale(1); opacity: 0.15; }
+                50% { transform: scale(0.65); opacity: 0.05; }
+            }
         </style>
     `;
 

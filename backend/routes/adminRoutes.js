@@ -8,9 +8,11 @@ router.get('/stats', adminMiddleware, adminController.getStats);
 
 // User Management
 router.get('/users', adminMiddleware, adminController.getUsers);
+router.post('/users', adminMiddleware, adminController.createUser);
 router.put('/users/:id', adminMiddleware, adminController.updateUser);
 
 // AI Configuration
+router.get('/config/ai-keys', adminMiddleware, adminController.getAIKeysStatus);
 router.get('/config/ai-prompt', adminMiddleware, adminController.getAIConfig);
 router.post('/config/ai-prompt', adminMiddleware, adminController.updateAIConfig);
 
