@@ -1848,15 +1848,25 @@
 @media (max-width: 992px) {
     .telegram-pro-section { padding: 60px 0; }
     
-    .hero-section {
-        grid-template-columns: 1fr;
+    .hero-scene {
+        flex-direction: column !important;
         text-align: center;
-        padding-top: 140px;
+        gap: 40px;
     }
     
+    /* Scale the massive 3D desk objects smoothly on tablets */
+    .aesthetic-desk {
+        transform: scale(0.7);
+        transform-origin: top center;
+        margin-bottom: -80px;
+    }
+    .lifestyle-scene.hero-scene {
+        flex-direction: column-reverse !important; /* Put laptop below text on mobile */
+    }
+
     .hero-badge { margin: 0 auto 24px; }
     .hero-desc { margin: 0 auto 40px; justify-content: center; }
-    .hero-section .hero-content div { justify-content: center; } /* Centers hero buttons */
+    .hero-scene .hero-content div { justify-content: center; } /* Centers hero buttons */
     
     .feature-block, .feature-block:nth-child(even) {
         flex-direction: column;
@@ -1894,6 +1904,12 @@
     .mockup-window { border-radius: 12px; }
     .hero-title { font-size: 2.2rem; }
     .feature-title { font-size: 1.8rem; }
+    
+    .aesthetic-desk {
+        transform: scale(0.48);
+        margin-bottom: -180px;
+    }
+
     .tele-mockup-stack {
         transform: scale(0.5); /* Even smaller for phones */
         margin-top: -30px;
