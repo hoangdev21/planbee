@@ -62,6 +62,56 @@ const parseActionLinks = (text) => {
     });
 };
 
+const typeEffect = (element, html, speed = 15, onFinished) => {
+    return new Promise((resolve) => {
+        const temp = document.createElement('div');
+        temp.innerHTML = html;
+        const nodes = Array.from(temp.childNodes);
+        let nodeIndex = 0;
+        let charIndex = 0;
+        
+        const msgBox = document.getElementById('chat-messages-box');
+
+        const type = () => {
+            if (nodeIndex >= nodes.length) {
+                element.classList.remove('is-typing');
+                if (onFinished) onFinished();
+                resolve();
+                return;
+            }
+
+            const currentNode = nodes[nodeIndex];
+            element.classList.add('is-typing');
+
+            if (currentNode.nodeType === Node.TEXT_NODE) {
+                if (charIndex === 0) {
+                    element.appendChild(document.createTextNode(''));
+                }
+                const text = currentNode.textContent;
+                if (charIndex < text.length) {
+                    element.lastChild.textContent += text[charIndex];
+                    charIndex++;
+                    if (msgBox) msgBox.scrollTop = msgBox.scrollHeight;
+                    setTimeout(type, speed);
+                } else {
+                    nodeIndex++;
+                    charIndex = 0;
+                    type();
+                }
+            } else {
+                // Append HTML elements (like <strong>, <br>, <button>) instantly but move to next
+                const clone = currentNode.cloneNode(true);
+                element.appendChild(clone);
+                nodeIndex++;
+                charIndex = 0;
+                if (msgBox) msgBox.scrollTop = msgBox.scrollHeight;
+                setTimeout(type, speed * 2); // Slightly longer pause for elements
+            }
+        };
+        type();
+    });
+};
+
 const attachActionListeners = (container, widget) => {
     container.querySelectorAll('.chat-action-link').forEach(btn => {
         btn.onclick = async (e) => {
@@ -313,10 +363,18 @@ const renderExpanded = (container) => {
             if (typingMsg) typingMsg.remove();
             
             const parsedContent = parseActionLinks(res.result);
-            msgBox.innerHTML += `<div class="msg-group msg-bot"><img src="/bot-bee.png" class="chat-avatar"><div class="msg-content">${parsedContent}</div></div>`;
+            
+            const botMsgGroup = document.createElement('div');
+            botMsgGroup.className = 'msg-group msg-bot';
+            botMsgGroup.innerHTML = `<img src="/bot-bee.png" class="chat-avatar"><div class="msg-content"></div>`;
+            msgBox.appendChild(botMsgGroup);
+            const contentEl = botMsgGroup.querySelector('.msg-content');
+            
+            // Apply typing effect
+            await typeEffect(contentEl, parsedContent, 10);
+            
             chatHistory.push({ role: "assistant", content: res.result });
             localStorage.setItem('bee_chat_history', JSON.stringify(chatHistory));
-            msgBox.scrollTop = msgBox.scrollHeight;
             attachActionListeners(msgBox, container);
         } catch (err) {
             const typingMsg = document.getElementById(typingId);
@@ -365,13 +423,19 @@ const showBeeGuide = (params = {}) => {
 
     const findTarget = () => {
         if (params.title) {
-            targetEl = Array.from(planningPage.querySelectorAll('.plan-event, .month-event-badge'))
-                .find(el => el.innerText.toLowerCase().includes(params.title.toLowerCase()) && el.offsetParent !== null);
+            // Remove emojis and trim for better matching
+            const cleanTitle = params.title.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').trim().toLowerCase();
+            
+            targetEl = Array.from(planningPage.querySelectorAll('.plan-event, .task-event, .month-event-badge'))
+                .find(el => {
+                    const elText = el.innerText.toLowerCase();
+                    return elText.includes(cleanTitle) && el.offsetParent !== null;
+                });
         }
         if (!targetEl && params.time && params.view !== 'month') {
             const hour = parseInt(params.time);
             const timeLabels = planningPage.querySelectorAll('.calendar-grid-scroll > div:first-child > div');
-            targetEl = Array.from(timeLabels).find(el => el.innerText.trim() === `${hour}:00`);
+            targetEl = Array.from(timeLabels).find(el => el.innerText.trim().startsWith(`${hour}:`));
         }
         return targetEl;
     };
@@ -396,13 +460,13 @@ const showBeeGuide = (params = {}) => {
         // Use 'true' to scroll and 'nearest' to avoid excessive blank space at bottom
         el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
         
-        // IMPORTANT: Remove overflow hidden to allow the glow to show!
-        el.style.overflow = 'visible';
-        el.style.zIndex = '10003';
+        // IMPORTANT: Higher z-index to stay ABOVE the blur backdrop (backdrop is 99999)
+        el.style.zIndex = '100005';
         el.style.border = '4px solid white';
         el.style.animation = 'eventFocus 1.0s ease-in-out infinite';
-        el.style.boxShadow = '0 0 60px rgba(255,255,255,1), 0 0 100px rgba(255,152,0,0.4)';
+        el.style.boxShadow = '0 0 60px rgba(255,255,255,1), 0 0 100px rgba(255,152,0,0.6)';
         el.style.transition = 'all 0.3s ease';
+        el.style.overflow = 'visible'; // Keep overflow visible to allow the glow to show
     };
 
     const renderBee = (el) => {
@@ -586,13 +650,77 @@ const addStyles = () => {
         .msg-user { align-self: flex-end; flex-direction: row-reverse; }
         
         .chat-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: var(--card-bg); border: 1px solid var(--border-color); flex-shrink: 0; }
-        .msg-content { padding: 12px 16px; border-radius: 18px; font-size: 0.95rem; line-height: 1.5; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
+        .msg-content { padding: 12px 16px; border-radius: 18px; font-size: 0.95rem; line-height: 1.5; box-shadow: 0 2px 8px rgba(0,0,0,0.02); position: relative; }
         
         .msg-bot .msg-content { background: var(--card-bg); color: var(--text-main); border-bottom-left-radius: 4px; border: 1.5px solid var(--border-color); }
         .msg-user .msg-content { background: var(--primary-color); color: white; border-bottom-right-radius: 4px; }
         
+        /* Cursor Effect for AI Typing */
+        .msg-content.is-typing::after {
+            content: '';
+            display: inline-block;
+            width: 7px;
+            height: 15px;
+            background: var(--primary-color);
+            margin-left: 4px;
+            vertical-align: middle;
+            animation: blink-cursor 0.8s infinite;
+            border-radius: 2px;
+        }
+        @keyframes blink-cursor { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
         .chat-action-link { display: block; margin-top: 10px; width: 100%; border: none; background: var(--primary-light); color: var(--primary-color); padding: 12px; border-radius: 14px; font-weight: 850; font-size: 0.8rem; cursor: pointer; transition: 0.2s; text-align: center; }
         .chat-action-link:hover { background: var(--primary-color); color: white; transform: translateY(-2px); }
+
+        /* Bee Guide Overlay Styles - SYNCED Z-INDEXES */
+        #bee-guide-overlay { position: fixed; inset: 0; z-index: 100000; pointer-events: none; }
+        .bee-guide-container { position: fixed; z-index: 100010; display: flex; flex-direction: column; align-items: center; pointer-events: auto; }
+        
+        .bee-speech-bubble { 
+            background: white; 
+            padding: 12px 20px; 
+            border-radius: 20px; 
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2); 
+            font-weight: 800; 
+            color: var(--primary-color); 
+            margin-bottom: 20px; 
+            position: relative; 
+            white-space: nowrap;
+            border: 2.5px solid var(--primary-color);
+            font-size: 0.95rem;
+        }
+        .bee-speech-bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-left: 12px solid transparent;
+            border-right: 12px solid transparent;
+            border-top: 12px solid var(--primary-color);
+        }
+        .bee-guide-img { width: 140px; height: auto; filter: drop-shadow(0 15px 25px rgba(0,0,0,0.25)); }
+        
+        .bee-guide-backdrop-simple { 
+            position: fixed; 
+            inset: 0; 
+            background: rgba(0,0,0,0.5); 
+            backdrop-filter: blur(8px); 
+            z-index: 99999; 
+            pointer-events: auto;
+        }
+
+        @keyframes eventFocus {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+        }
+        
+        .fade-out { opacity: 0; transition: opacity 0.4s ease; }
+        .show-sparkles { animation: sparkle 1.5s infinite; }
+        @keyframes sparkle {
+            0%, 100% { filter: brightness(1); }
+            50% { filter: brightness(1.2) saturate(1.2); }
+        }
 
         .chat-input-area { padding: 16px 20px; background: var(--card-bg); border-top: 1px solid var(--border-color); display: flex; gap: 10px; }
         .chat-input-area input { flex: 1; border: 1.5px solid var(--border-color); border-radius: 14px; padding: 12px 16px; outline: none; transition: 0.2s; background: var(--bg-color); color: var(--text-main); font-size: 0.95rem; }
