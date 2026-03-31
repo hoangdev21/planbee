@@ -58,27 +58,210 @@ export const renderLanding = (container) => {
                 </div>
             </nav>
 
-            <!-- Ultimate Hero Section -->
-            <section class="hero-section">
-                <div class="hero-content reveal">
-                    <h1 class="hero-title">
-                        Làm Việc Ít Hơn,<br><span>Hoàn Thành Nhiều Hơn</span>
-                    </h1>
-                    <p class="hero-desc">
-                        Trải nghiệm sức mạnh của AI trong việc tự động hóa lịch trình, quản lý công việc và tối ưu hóa thời gian của bạn chỉ với một tin nhắn.
-                    </p>
-                    <div style="display: flex; gap: 16px; flex-wrap: wrap;">
-                        <a href="#/register" class="btn-premium btn-primary-orange">Bắt đầu miễn phí <i class="fas fa-arrow-right"></i></a>
-                        <a href="#features" class="btn-premium btn-secondary-white">Khám phá tính năng</a>
+            <!-- Ultimate Hero Sequence -->
+            <div class="hero-sequence">
+                <!-- Part 1: Chaos To Organized -->
+                <section class="hero-scene chaos-scene reveal">
+                    <div class="hero-content" style="flex: 1;">
+                        <span class="feature-tag">Sức Mạnh Của Trí Tuệ Nhân Tạo</span>
+                        <h1 class="hero-title" style="font-size: clamp(2rem, 4vw, 3.5rem);">
+                            Từ <span style="color: #ef4444; background: none; -webkit-text-fill-color: currentcolor;">"Hỗn Độn"</span><br>Thành <span style="background: linear-gradient(135deg, var(--brand-orange), #ff6b6b); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">"Có Tổ Chức"</span>
+                        </h1>
+                        <p class="hero-desc">
+                            Đừng để cuộn trào tin nhắn và deadline nhấn chìm bạn. BeeAI sẽ 'hút' toàn bộ ghi chú lộn xộn, tự động phân tích và sắp xếp thành các khối thời gian (Time-blocks) gọn gàng chỉ trong một tích tắc.
+                        </p>
+                        <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+                            <a href="#/register" class="btn-premium btn-primary-orange">Bắt đầu ngay <i class="fas fa-arrow-right"></i></a>
+                        </div>
                     </div>
-                </div>
-                <div class="hero-visual reveal shadow-xl" style="position: relative; flex: 1.5;">
-                     <!-- Increased Width and Removed Tilt for Clarity -->
-                    <div class="mockup-window" style="max-width: 680px; margin-left: auto; transform: none; border: none; box-shadow: 0 30px 80px rgba(0,0,0,0.15);">
-                        <img src="/hero-mockup.png" alt="PlanBee Dash" style="width: 100%; display: block; border-radius: 20px;">
+                    <div class="hero-visual chaos-visual" style="flex: 1.2;">
+                        <!-- Center AI Sorter -->
+                        <div class="ai-blackhole">
+                            <div class="blackhole-ring outer"></div>
+                            <div class="blackhole-ring inner"></div>
+                            <div class="blackhole-core">
+                                <img src="/bee-hero.png" alt="AI Core Bee" class="core-bee-img">
+                                <!-- Electric Lightning Effects -->
+                                <div class="lightning-spark s-1"></div>
+                                <div class="lightning-spark s-2"></div>
+                                <div class="lightning-spark s-3"></div>
+                            </div>
+                        </div>
+
+                        <!-- Orbiting Messy Notes -->
+                        <div class="messy-orbit">
+                            <div class="messy-note mn-1">⚠️ Deadline 5PM!!</div>
+                            <div class="messy-message mm-1"><i class="fas fa-comment"></i> Review code nhé anh</div>
+                            <div class="messy-note mn-2">Gọi KH lúc 3h?</div>
+                            <div class="messy-message mm-2"><i class="fas fa-envelope"></i> FW: Báo cáo Q3</div>
+                            <div class="messy-note mn-3">Brainstorming logo</div>
+                        </div>
+
                     </div>
-                </div>
-            </section>
+                </section>
+
+                <!-- Part 2: Lifestyle - Work Less -->
+                <section class="hero-scene lifestyle-scene reveal" style="margin-top: 140px;">
+                    <div class="hero-visual lifestyle-visual" style="flex: 1.2;">
+                        <div class="aesthetic-desk">
+                            <!-- Coffee Cup -->
+                            <div class="desk-coffee">
+                                <div class="coffee-steam s1"></div>
+                                <div class="coffee-steam s2"></div>
+                                <div class="coffee-steam s3"></div>
+                                <div class="cup-body">☕</div>
+                            </div>
+                            
+                            <!-- Realistic Macbook Pro Mockup -->
+                            <div class="macbook-pro">
+                                <div class="macbook-lid">
+                                    <div class="macbook-screen">
+                                        <!-- The Notch -->
+                                        <div class="mac-notch">
+                                            <div class="mac-camera"></div>
+                                        </div>
+                                        
+                                        <!-- OS Wallpaper & UI -->
+                                        <div class="mac-wallpaper"></div>
+                                        <div class="mac-content">
+                                            <div class="mac-topbar">
+                                                <div class="mac-dots"><i></i><i></i><i></i></div>
+                                                <div class="mac-status-icons">
+                                                    <i class="fas fa-wifi"></i>
+                                                    <i class="fas fa-battery-half"></i>
+                                                    <span>Tue 10:42 AM</span>
+                                                </div>
+                                            </div>
+                                            <div class="mac-notifications-wrapper">
+                                                <div class="mac-notif-track">
+                                                    <!-- MacOS Style Glass Notifications -->
+                                                    <div class="m-notif">
+                                                        <div class="n-app-icon bee-icon"><img src="/bee-hero.png" alt="Bee"/></div>
+                                                        <div class="n-content">
+                                                            <div class="n-header"><span>PlanBee Autopilot</span><span class="n-time">Bây giờ</span></div>
+                                                            <div class="n-title">Đã lập lịch họp giao ban</div>
+                                                            <div class="n-desc">Khung giờ 14:00 - 15:30 đã được chốt và gửi lời mời.</div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="m-notif">
+                                                        <div class="n-app-icon mail-icon"><i class="fas fa-envelope"></i></div>
+                                                        <div class="n-content">
+                                                            <div class="n-header"><span>Mail Response</span><span class="n-time">1 phút trước</span></div>
+                                                            <div class="n-title">Email từ Khách Hàng</div>
+                                                            <div class="n-desc">AI đã phân tích và lưu scope dự án vào thư mục.</div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="m-notif in-progress">
+                                                        <div class="n-app-icon sync-icon"><i class="fas fa-sync fa-spin"></i></div>
+                                                        <div class="n-content">
+                                                            <div class="n-header"><span>Hệ thống AI</span><span class="n-time">Đang xử lý</span></div>
+                                                            <div class="n-title">Đang sắp xếp lại toàn bộ lịch...</div>
+                                                            <div class="n-desc">Tìm thấy khe hở 2 tiếng chiều Thứ 6 để bạn xả hơi.</div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="m-notif">
+                                                        <div class="n-app-icon cal-icon"><i class="fas fa-calendar-check"></i></div>
+                                                        <div class="n-content">
+                                                            <div class="n-header"><span>Lịch trình</span><span class="n-time">10 phút trước</span></div>
+                                                            <div class="n-title">Dời lịch Gym thành công</div>
+                                                            <div class="n-desc">Lịch tập Gym chuyển sang sáng Thứ 7 theo thói quen.</div>
+                                                        </div>
+                                                    </div>
+
+                                                    <!-- Duplicated for Loop -->
+                                                    <div class="m-notif">
+                                                        <div class="n-app-icon bee-icon"><img src="/bee-hero.png" alt="Bee"/></div>
+                                                        <div class="n-content">
+                                                            <div class="n-header"><span>PlanBee Autopilot</span><span class="n-time">Bây giờ</span></div>
+                                                            <div class="n-title">Đã lập lịch họp giao ban</div>
+                                                            <div class="n-desc">Khung giờ 14:00 - 15:30 đã được chốt và gửi lời mời.</div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="m-notif">
+                                                        <div class="n-app-icon mail-icon"><i class="fas fa-envelope"></i></div>
+                                                        <div class="n-content">
+                                                            <div class="n-header"><span>Mail Response</span><span class="n-time">1 phút trước</span></div>
+                                                            <div class="n-title">Email từ Khách Hàng</div>
+                                                            <div class="n-desc">AI đã phân tích và lưu scope dự án vào thư mục.</div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="m-notif in-progress">
+                                                        <div class="n-app-icon sync-icon"><i class="fas fa-sync fa-spin"></i></div>
+                                                        <div class="n-content">
+                                                            <div class="n-header"><span>Hệ thống AI</span><span class="n-time">Đang xử lý</span></div>
+                                                            <div class="n-title">Đang sắp xếp lại toàn bộ lịch...</div>
+                                                            <div class="n-desc">Tìm thấy khe hở 2 tiếng chiều Thứ 6 để bạn xả hơi.</div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="m-notif">
+                                                        <div class="n-app-icon cal-icon"><i class="fas fa-calendar-check"></i></div>
+                                                        <div class="n-content">
+                                                            <div class="n-header"><span>Lịch trình</span><span class="n-time">10 phút trước</span></div>
+                                                            <div class="n-title">Dời lịch Gym thành công</div>
+                                                            <div class="n-desc">Lịch tập Gym chuyển sang sáng Thứ 7 theo thói quen.</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="macbook-bezel-text">MacBook Pro</div>
+                                </div>
+                                <div class="macbook-base">
+                                    <!-- Ultra Realistic MacBook Keyboard Surface -->
+                                    <div class="macbook-keyboard">
+                                        <!-- Row 1: Function Keys -->
+                                        <div class="kb-row row-1">
+                                            <div class="k-key esc"></div><div class="k-key f"></div><div class="k-key f"></div><div class="k-key f"></div><div class="k-key f"></div><div class="k-key f"></div><div class="k-key f"></div><div class="k-key f"></div><div class="k-key f"></div><div class="k-key f"></div><div class="k-key f"></div><div class="k-key f"></div><div class="k-key f"></div><div class="k-key tid"></div>
+                                        </div>
+                                        <!-- Row 2: Numbers -->
+                                        <div class="kb-row row-2">
+                                            <div class="k-key til"></div><div class="k-key"></div><div class="k-key"></div><div class="k-key"></div><div class="k-key"></div><div class="k-key"></div><div class="k-key"></div><div class="k-key"></div><div class="k-key"></div><div class="k-key"></div><div class="k-key"></div><div class="k-key"></div><div class="k-key"></div><div class="k-key del"></div>
+                                        </div>
+                                        <!-- Row 3: QWERTY -->
+                                        <div class="kb-row row-3">
+                                            <div class="k-key tab"></div><div class="k-key"></div><div class="k-key"></div><div class="k-key"></div><div class="k-key"></div><div class="k-key"></div><div class="k-key"></div><div class="k-key"></div><div class="k-key"></div><div class="k-key"></div><div class="k-key"></div><div class="k-key"></div><div class="k-key"></div><div class="k-key slash"></div>
+                                        </div>
+                                        <!-- Row 4: ASDF -->
+                                        <div class="kb-row row-4">
+                                            <div class="k-key caps"></div><div class="k-key"></div><div class="k-key"></div><div class="k-key"></div><div class="k-key bee-key"><span>BEE AI</span></div><div class="k-key"></div><div class="k-key"></div><div class="k-key"></div><div class="k-key"></div><div class="k-key"></div><div class="k-key"></div><div class="k-key return"></div>
+                                        </div>
+                                        <!-- Row 5: ZXCV -->
+                                        <div class="kb-row row-5">
+                                            <div class="k-key shift"></div><div class="k-key"></div><div class="k-key"></div><div class="k-key"></div><div class="k-key"></div><div class="k-key"></div><div class="k-key"></div><div class="k-key"></div><div class="k-key"></div><div class="k-key"></div><div class="k-key shift-r"></div>
+                                        </div>
+                                        <!-- Row 6: Spacebar row -->
+                                        <div class="kb-row row-6">
+                                            <div class="k-key fn"></div><div class="k-key ctrl"></div><div class="k-key opt"></div><div class="k-key cmd"></div><div class="k-key spacebar"></div><div class="k-key cmd-r"></div><div class="k-key opt-r"></div>
+                                            <div class="k-arrows">
+                                                <div class="k-key up"></div>
+                                                <div class="k-key down-arrows"><div class="k-key lft"></div><div class="k-key dwn"></div><div class="k-key rgt"></div></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="macbook-trackpad"></div>
+                                    <!-- Front Edge & Indent -->
+                                    <div class="macbook-front-edge">
+                                        <div class="macbook-indent"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Flora -->
+                            <div class="desk-plant">🌿</div>
+                        </div>
+                    </div>
+                    <div class="hero-content" style="flex: 1; padding-left: 60px;">
+                        <span class="feature-tag">Autopilot Mode</span>
+                        <h1 class="hero-title" style="font-size: clamp(2rem, 4vw, 3.5rem);">
+                            Làm Việc Ít Hơn,<br><span>Sống Tận Hưởng Hơn</span>
+                        </h1>
+                        <p class="hero-desc">
+                            Tại sao phải cắm mặt vào giấy tờ khi AI có thể làm thay bạn? Chỉ cần bật chế độ <b>Autopilot</b>, nhâm nhi ly cà phê sáng và để hệ thống tự động thương lượng, lên lịch và tối ưu hóa ngày làm việc của bạn.
+                        </p>
+                    </div>
+                </section>
+            </div>
 
             <!-- Features Section -->
             <section id="features" class="features-section">
@@ -239,16 +422,18 @@ export const renderLanding = (container) => {
         };
 
         const guideSteps = [
-            { id: 'hero', msg: "Chào mừng bạn tới với PlanBee, tận hưởng ngay nhé 💛", align: 0.8 }, // Right side
-            { id: 'video', msg: "Chat với tớ qua widget này nhé!", align: 0.15 }, // Left side (Video Section)
-            { id: 'telegram', msg: "Nhận thông báo lịch trình qua Telegram liền tay!", align: 0.8 } // Right side (Telegram Section)
+            { id: 'hero', msg: "Chào mừng bạn tới với PlanBee, tận hưởng ngay nhé 💛", align: 0.85 }, // Right side (Chaos Scene)
+            { id: 'autopilot', msg: "Chỉ cần bật Autopilot, tớ sẽ tự động hóa mọi thứ cho bạn!", align: 0.15 }, // Left side (Lifestyle Mac)
+            { id: 'video', msg: "Hoặc chat với tớ qua widget này nhé!", align: 0.85 }, // Right side (Chat Widget Section)
+            { id: 'telegram', msg: "Nhận thông báo lịch trình qua Telegram liền tay!", align: 0.15 } // Left side (Telegram Section)
         ];
 
         let currentGuideIndex = -1;
         const sectionsToObserve = [
-            container.querySelector('.hero-section'),
+            container.querySelector('.chaos-scene'),
+            container.querySelector('.lifestyle-scene'),
             ...container.querySelectorAll('.feature-block')
-        ];
+        ].filter(Boolean); // Clean any nulls
 
         // Refined Observer: Uses rootMargin to target the "active" zone of the screen
         const sectionObserver = new IntersectionObserver((entries) => {
