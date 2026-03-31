@@ -43,7 +43,7 @@ const authController = {
 
             // Generate Token
             const token = jwt.sign(
-                { id: userId, username },
+                { id: userId, username, role: 'user' },
                 process.env.JWT_SECRET || 'secret',
                 { expiresIn: '7d' }
             );
@@ -90,7 +90,7 @@ const authController = {
 
             // Token
             const token = jwt.sign(
-                { id: user.id, username: user.username },
+                { id: user.id, username: user.username, role: user.role },
                 process.env.JWT_SECRET || 'secret',
                 { expiresIn: '7d' }
             );
@@ -109,7 +109,13 @@ const authController = {
 
             res.json({
                 message: 'Đăng nhập thành công!',
-                user: { id: user.id, username: user.username, email: user.email },
+                user: { 
+                    id: user.id, 
+                    username: user.username, 
+                    email: user.email, 
+                    role: user.role, 
+                    account_type: user.account_type 
+                },
                 settings: settings[0] || { theme: 'light', accent_color: '#FFA726' },
                 token
             });

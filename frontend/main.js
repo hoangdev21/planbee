@@ -93,6 +93,14 @@ const handleRoute = async () => {
         case '#/settings':
             renderAppShell(app, 'settings', params);
             break;
+        case '#/admin':
+        case '#/admin/users':
+        case '#/admin/ai':
+        case '#/admin/stats':
+        case '#/admin/notifications':
+            const subPage = path.split('/')[2] || 'dashboard'; // admin, users, ai...
+            renderAppShell(app, `admin-${subPage}`, params);
+            break;
         default:
             app.innerHTML = '<h1>404 Not Found</h1>';
     }
@@ -162,6 +170,12 @@ const renderAppShell = async (container, activePage, params = {}) => {
         case 'settings':
             const { renderSettings } = await import('./src/pages/settings.js');
             renderSettings(content, params);
+            break;
+        default:
+            if (activePage.startsWith('admin-')) {
+                const { renderAdminDashboard } = await import('./src/pages/AdminDashboard.js');
+                renderAdminDashboard(content, activePage, params);
+            }
             break;
     }
 };

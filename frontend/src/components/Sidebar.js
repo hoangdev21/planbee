@@ -4,13 +4,32 @@ export const renderSidebar = (container, activePage) => {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     const userName = user.username || localStorage.getItem('user_name') || 'Người dùng';
     
-    const menuItems = [
-        { id: 'dashboard', label: 'Tổng quan', icon: 'fas fa-th-large', path: '#/dashboard' },
-        { id: 'tasks', label: 'Nhiệm vụ', icon: 'fas fa-list-check', path: '#/tasks' },
-        { id: 'planning', label: 'Lập kế hoạch', icon: 'fas fa-calendar-days', path: '#/planning' },
-        { id: 'habits', label: 'Thói quen', icon: 'fas fa-repeat', path: '#/habits' },
-        { id: 'settings', label: 'Cài đặt', icon: 'fas fa-gear', path: '#/settings' },
-    ];
+    let menuItems = [];
+    const isAdminMode = activePage.startsWith('admin');
+
+    if (isAdminMode) {
+        menuItems = [
+            { id: 'admin-dashboard', label: 'Dashboard', icon: 'fas fa-chart-pie', path: '#/admin' },
+            { id: 'admin-users', label: 'Quản lý người dùng', icon: 'fas fa-users-gear', path: '#/admin/users' },
+            { id: 'admin-ai', label: 'Giám sát & Điều phối AI', icon: 'fas fa-shield-halved', path: '#/admin/ai' },
+            { id: 'admin-stats', label: 'Thống kê hiệu suất', icon: 'fas fa-chart-line', path: '#/admin/stats' },
+            { id: 'admin-notifications', label: 'Quản lý thông báo', icon: 'fas fa-bullhorn', path: '#/admin/notifications' },
+            { id: 'back-to-user', label: 'Về Website', icon: 'fas fa-arrow-left-long', path: '#/dashboard' },
+        ];
+    } else {
+        menuItems = [
+            { id: 'dashboard', label: 'Tổng quan', icon: 'fas fa-th-large', path: '#/dashboard' },
+            { id: 'tasks', label: 'Nhiệm vụ', icon: 'fas fa-list-check', path: '#/tasks' },
+            { id: 'planning', label: 'Lập kế hoạch', icon: 'fas fa-calendar-days', path: '#/planning' },
+            { id: 'habits', label: 'Thói quen', icon: 'fas fa-repeat', path: '#/habits' },
+            { id: 'settings', label: 'Cài đặt', icon: 'fas fa-gear', path: '#/settings' },
+        ];
+        if (user.role === 'admin') {
+            menuItems.push({ id: 'admin', label: 'Admin Panel', icon: 'fas fa-user-shield', path: '#/admin' });
+        }
+    }
+
+    const accountType = (user.account_type || 'Free').toUpperCase() + ' PLAN';
 
     container.innerHTML = `
         <div class="sidebar-wrapper" style="padding: var(--spacing-lg); display: flex; flex-direction: column; height: 100%;">
@@ -35,7 +54,7 @@ export const renderSidebar = (container, activePage) => {
                     </div>
                     <div style="flex: 1; overflow: hidden;">
                         <div style="font-weight: 800; font-size: 0.95rem; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${userName}</div>
-                        <div style="font-size: 0.7rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Premium Plan</div>
+                        <div style="font-size: 0.7rem; font-weight: 700; color: var(--primary-color); text-transform: uppercase; letter-spacing: 0.5px;">${accountType}</div>
                     </div>
                 </div>
                 <button id="logout-btn" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 12px; padding: 14px; border-radius: 14px; color: var(--danger); font-weight: 800; font-family: inherit; background: rgba(214, 48, 49, 0.05); border: 1.5px solid rgba(214, 48, 49, 0.1); cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);">
