@@ -1041,6 +1041,179 @@
     }
 }
 
+/* ========================================================================= */
+/* MAGIC MEADOW ECOSYSTEM (Animated Footer Section)                          */
+/* ========================================================================= */
+.magic-meadow {
+    position: relative;
+    width: 100%;
+    height: 350px;
+    background: linear-gradient(180deg, transparent 0%, rgba(255, 189, 46, 0.05) 40%, rgba(39, 201, 63, 0.1) 100%);
+    overflow: hidden;
+    margin-top: 60px;
+    display: flex;
+    align-items: flex-end;
+    pointer-events: none; /* Let clicks pass through if needed, though mostly decorative */
+}
+
+[data-theme="dark"] .magic-meadow {
+    background: linear-gradient(180deg, transparent 0%, rgba(255, 189, 46, 0.02) 50%, rgba(39, 201, 63, 0.05) 100%);
+}
+
+#meadow-canvas {
+    position: absolute;
+    inset: 0;
+    z-index: 5; /* Between back ground and front ground */
+}
+
+/* Layered Grass/Hills */
+.meadow-ground-layer {
+    position: absolute;
+    bottom: -60px;
+    width: 120%;
+    border-radius: 50% 50% 0 0;
+}
+
+.meadow-ground-back {
+    left: -10%;
+    height: 200px;
+    background: #4ade80; 
+    opacity: 0.2;
+    filter: blur(4px);
+    z-index: 1;
+}
+
+.meadow-ground-front {
+    left: -5%;
+    height: 160px;
+    background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
+    border-radius: 60% 40% 0 0;
+    box-shadow: inset 0 20px 40px rgba(0,0,0,0.1);
+    z-index: 10;
+}
+
+[data-theme="dark"] .meadow-ground-back { opacity: 0.1; background: #22c55e; }
+[data-theme="dark"] .meadow-ground-front { 
+    background: linear-gradient(180deg, #166534 0%, #064e3b 100%);
+}
+
+/* Dynamic Lush Flora (Flowers & Grass) */
+.meadow-flower {
+    position: absolute;
+    bottom: var(--flower-bottom);
+    left: var(--flower-left);
+    width: 30px;
+    height: 80px;
+    transform-origin: bottom center;
+    animation: meadowSway var(--sway-duration) ease-in-out infinite alternate;
+}
+
+.meadow-flower::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 3px;
+    height: 100%;
+    background: linear-gradient(0deg, #16a34a, #4ade80);
+    border-radius: 2px;
+}
+
+[data-theme="dark"] .meadow-flower::before { background: linear-gradient(0deg, #064e3b, #15803d); }
+
+.flower-head {
+    position: absolute;
+    top: -15px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 26px;
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.15));
+    line-height: 1;
+}
+
+@keyframes meadowSway {
+    0% { transform: scale(var(--fl-scale, 1)) rotate(-10deg); }
+    100% { transform: scale(var(--fl-scale, 1)) rotate(15deg); }
+}
+
+/* Lush Standing Grass */
+.meadow-grass {
+    position: absolute;
+    bottom: var(--grass-bottom);
+    left: var(--grass-left);
+    width: 3px; 
+    height: var(--grass-h);
+    background: linear-gradient(0deg, #15803d 0%, #22c55e 60%, #4ade80 100%);
+    border-radius: 4px 4px 0 0;
+    transform-origin: bottom center;
+    animation: grassSway var(--sway-duration) ease-in-out infinite alternate;
+}
+
+.meadow-grass.dark-blade {
+    background: linear-gradient(0deg, #14532d 0%, #16a34a 60%, #22c55e 100%);
+}
+
+[data-theme="dark"] .meadow-grass { background: linear-gradient(0deg, #064e3b 0%, #166534 60%, #15803d 100%); }
+[data-theme="dark"] .meadow-grass.dark-blade { background: linear-gradient(0deg, #022c22 0%, #064e3b 60%, #166534 100%); }
+
+@keyframes grassSway {
+    0% { transform: scale(var(--fl-scale, 1)) rotate(calc(var(--grass-tilt, 0deg) - 8deg)); }
+    100% { transform: scale(var(--fl-scale, 1)) rotate(calc(var(--grass-tilt, 0deg) + 8deg)); }
+}
+
+/* Falling Leaves */
+.meadow-leaf {
+    position: absolute;
+    top: -20px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50% 0 50% 0; /* Leaf shape */
+    animation: meadowFall linear forwards;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+@keyframes meadowFall {
+    0% { transform: translateY(-20px) rotate(0deg) scale(var(--sz)); opacity: var(--op); }
+    50% { transform: translateY(180px) translateX(60px) rotate(180deg) scale(var(--sz)); }
+    100% { transform: translateY(380px) translateX(-40px) rotate(360deg) scale(var(--sz)); opacity: 0; }
+}
+
+/* Flying Worker Bees */
+.meadow-bee-wrap {
+    position: absolute;
+    animation-timing-function: linear;
+    animation-fill-mode: forwards;
+}
+
+.meadow-bee-img {
+    height: auto;
+    filter: drop-shadow(0 15px 20px rgba(0,0,0,0.3));
+    animation: meadowWobble 2s ease-in-out infinite alternate;
+    will-change: transform;
+}
+
+@keyframes meadowFlyRight {
+    0% { transform: translateX(-150px) translateY(0); }
+    25% { transform: translateX(25vw) translateY(-40px); }
+    50% { transform: translateX(50vw) translateY(30px); }
+    75% { transform: translateX(75vw) translateY(-50px); }
+    100% { transform: translateX(110vw) translateY(0); }
+}
+
+@keyframes meadowFlyLeft {
+    0% { transform: translateX(110vw) translateY(0) scaleX(-1); }
+    25% { transform: translateX(75vw) translateY(-40px) scaleX(-1); }
+    50% { transform: translateX(50vw) translateY(30px) scaleX(-1); }
+    75% { transform: translateX(25vw) translateY(-50px) scaleX(-1); }
+    100% { transform: translateX(-150px) translateY(0) scaleX(-1); }
+}
+
+@keyframes meadowWobble {
+    0% { transform: translateY(-12px) rotate(-6deg); }
+    100% { transform: translateY(12px) rotate(6deg); }
+}
+
 /* Responsive Fixes */
 @media (max-width: 992px) {
     .telegram-pro-section { padding: 60px 0; }

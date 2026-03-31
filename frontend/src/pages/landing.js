@@ -158,6 +158,16 @@ export const renderLanding = (container) => {
 
             </section>
 
+            <!-- Magic Meadow Section -->
+            <section class="magic-meadow">
+                <!-- Layers of Depth -->
+                <div class="meadow-ground-layer meadow-ground-back"></div>
+                <!-- Dynamic Canvas for Leaves & Bees -->
+                <div id="meadow-canvas"></div>
+                <!-- Interactive Grass & Flowers -->
+                <div class="meadow-ground-layer meadow-ground-front"></div>
+            </section>
+
             <!-- Ultimate Footer -->
             <footer class="landing-footer">
                 <img src="/logo.png" style="height: 48px; filter: grayscale(1); opacity: 0.6; margin-bottom: 24px;">
@@ -404,6 +414,113 @@ export const renderLanding = (container) => {
                 bee.classList.add('idle');
             }, 100);
         });
+
+        // --- MAGIC MEADOW LOGIC ---
+        const meadowBg = container.querySelector('.magic-meadow');
+        const meadowCanvas = container.querySelector('#meadow-canvas');
+        if (meadowCanvas && meadowBg) {
+            
+            // 1. Plant Lush Flora (Grass and Flowers)
+            const floraCount = Math.floor(window.innerWidth / 8); // Extremely dense!
+            const flowerShapes = ['🌸', '🌼', '🌻', '🌷', '🏵️'];
+            for(let i=0; i<floraCount; i++) {
+                const isFlower = Math.random() > 0.85; // 15% flowers, 85% grass
+                const flora = document.createElement('div');
+                
+                const leftPos = (Math.random() * 105 - 2.5) + '%';
+                
+                // Real 3D layering: Back, Mid, Front
+                const depthRoll = Math.random();
+                let zIdx = 3; let bottomBase = 50; let bottomRange = 30; let scale = 0.6;
+                
+                if (depthRoll > 0.7) { 
+                    zIdx = 12; // Front of the hill
+                    bottomBase = -10; bottomRange = 20; scale = 1.2;
+                } else if (depthRoll > 0.3) { 
+                    zIdx = 8; // Midground
+                    bottomBase = 20; bottomRange = 30; scale = 0.9;
+                }
+
+                const bottomPos = (Math.random() * bottomRange + bottomBase) + 'px';
+                const duration = (Math.random() * 2 + 2) + 's';
+                flora.style.zIndex = zIdx;
+                
+                if (isFlower) {
+                    flora.className = 'meadow-flower';
+                    flora.style.setProperty('--flower-left', leftPos);
+                    flora.style.setProperty('--flower-bottom', bottomPos);
+                    flora.style.setProperty('--sway-duration', duration);
+                    flora.style.setProperty('--fl-scale', scale);
+                    flora.innerHTML = `<div class="flower-head">${flowerShapes[Math.floor(Math.random() * flowerShapes.length)]}</div>`;
+                } else {
+                    flora.className = 'meadow-grass';
+                    flora.style.setProperty('--grass-left', leftPos);
+                    flora.style.setProperty('--grass-bottom', bottomPos);
+                    flora.style.setProperty('--sway-duration', duration);
+                    flora.style.setProperty('--fl-scale', scale);
+                    flora.style.setProperty('--grass-h', (Math.random() * 70 + 40) + 'px');
+                    flora.style.setProperty('--grass-tilt', (Math.random() * 30 - 15) + 'deg');
+                    if (Math.random() > 0.5) flora.classList.add('dark-blade');
+                }
+                
+                meadowBg.appendChild(flora);
+            }
+
+            // 2. Spawn Falling Leaves
+            const spawnLeaf = () => {
+                const leaf = document.createElement('div');
+                leaf.className = 'meadow-leaf';
+                leaf.style.left = Math.random() * 100 + '%';
+                leaf.style.animationDuration = (Math.random() * 5 + 6) + 's';
+                leaf.style.setProperty('--sz', Math.random() * 0.5 + 0.5);
+                leaf.style.setProperty('--op', Math.random() * 0.4 + 0.2);
+                
+                const colors = ['#fcd34d', '#fbbf24', '#f59e0b', '#bbf7d0', '#86efac'];
+                leaf.style.background = colors[Math.floor(Math.random() * colors.length)];
+                
+                meadowCanvas.appendChild(leaf);
+                setTimeout(() => { if(leaf.parentNode) leaf.parentNode.removeChild(leaf); }, 11000);
+            };
+
+            // 3. Spawn Worker Bees looking for nectar
+            const spawnMeadowBee = () => {
+                const wrap = document.createElement('div');
+                wrap.className = 'meadow-bee-wrap';
+                
+                const beeImg = document.createElement('img');
+                beeImg.src = '/bee.png';
+                beeImg.className = 'meadow-bee-img';
+                wrap.appendChild(beeImg);
+                
+                // Random height and trajectory
+                wrap.style.top = (Math.random() * 50 + 10) + '%';
+                const duration = Math.random() * 10 + 12; // Very smooth, long flight
+                wrap.style.animationDuration = duration + 's';
+                
+                // Random depth size
+                const zScale = Math.random() * 0.4 + 0.4;
+                beeImg.style.width = (60 * zScale) + 'px';
+                
+                // Fly direction logic
+                const flyLeft = Math.random() > 0.5;
+                if (flyLeft) {
+                    wrap.style.animationName = 'meadowFlyLeft';
+                } else {
+                    wrap.style.animationName = 'meadowFlyRight';
+                }
+                
+                meadowCanvas.appendChild(wrap);
+                setTimeout(() => { if(wrap.parentNode) wrap.parentNode.removeChild(wrap); }, duration * 1000 + 1000);
+            };
+
+            // Seed initial ecosystem
+            for(let i=0; i<5; i++) setTimeout(spawnLeaf, Math.random() * 2000);
+            for(let i=0; i<3; i++) setTimeout(spawnMeadowBee, Math.random() * 3000);
+            
+            // Let nature run
+            setInterval(spawnLeaf, 1500);
+            setInterval(spawnMeadowBee, 4000);
+        }
     };
 
     setTimeout(addEffects, 100);
