@@ -390,9 +390,16 @@ const renderExpanded = (container) => {
         e.stopPropagation();
         isExpanded = false;
         isFullscreen = false;
+        
+        const inner = container.querySelector('.chat-container-inner');
+        if (inner) inner.style.opacity = '0';
+        
         container.className = 'chat-widget-closed';
-        container.style.cssText = '';
-        renderMinimized(container);
+        
+        setTimeout(() => {
+            container.style.cssText = '';
+            renderMinimized(container);
+        }, 400); 
     };
 
     clearBtn.onclick = (e) => {
@@ -561,9 +568,52 @@ const addStyles = () => {
             border: 1px solid var(--border-color);
             flex-direction: column;
         }
-        .chat-widget-expanded.fullscreen { width: 100vw; height: 100vh; position: fixed; top: 0; left: 0; bottom: 0; right: 0; border-radius: 0; z-index: 10000; }
+
+        /* Fullscreen State - DANGEROUSLY DOMINANT */
+        #bee-chat-widget.fullscreen { 
+            position: fixed !important;
+            inset: 0 !important;
+            width: 100vw !important; 
+            height: 100vh !important; 
+            margin: 0 !important;
+            padding: 0 !important;
+            top: 0 !important; 
+            left: 0 !important; 
+            bottom: 0 !important; 
+            right: 0 !important; 
+            border-radius: 0 !important; 
+            z-index: 1000000 !important;
+            max-width: none !important;
+            max-height: none !important;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1) !important; 
+            background: var(--card-bg) !important;
+        }
         
-        .chat-container-inner { width: 100%; height: 100%; display: flex; flex-direction: column; }
+        #bee-chat-widget.fullscreen.chat-widget-expanded {
+            width: 100% !important;
+            height: 100% !important;
+            display: flex !important;
+        }
+
+        #bee-chat-widget.fullscreen .chat-container-inner {
+            width: 100% !important;
+            height: 100% !important;
+            max-width: none !important;
+            max-height: none !important;
+            border-radius: 0 !important;
+        }
+        
+        #bee-chat-widget.fullscreen .chat-header {
+            border-radius: 0 !important;
+        }
+        
+        .chat-container-inner { 
+            width: 100%; 
+            height: 100%; 
+            display: flex; 
+            flex-direction: column; 
+            transition: opacity 0.3s ease;
+        }
         
         /* Premium Header Redesign */
         .chat-header { 
