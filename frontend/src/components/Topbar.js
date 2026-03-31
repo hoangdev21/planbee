@@ -28,6 +28,16 @@ export const renderTopbar = (container) => {
                     <input type="text" id="global-search" placeholder="Tìm kiếm..." 
                         style="padding: 8px 12px 8px 36px; border-radius: 10px; border: 1px solid var(--border-color); background: var(--input-bg); width: 220px; outline: none; transition: all 0.3s; font-size: 0.85rem; font-weight: 600;">
                     <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-light); font-size: 0.8rem;"></i>
+                    
+                    <!-- Search Results Dropdown -->
+                    <div id="search-results" style="position: absolute; top: calc(100% + 12px); left: 0; width: 400px; background: white; border-radius: 16px; border: 1px solid var(--border-color); box-shadow: 0 15px 45px rgba(0,0,0,0.15); z-index: 2000; overflow: hidden; display: none; animation: slideDown 0.3s ease;">
+                        <div id="search-items-list" style="max-height: 450px; overflow-y: auto;">
+                            <!-- Results injected here -->
+                        </div>
+                        <div style="padding: 12px; background: #f8f9fa; border-top: 1px solid var(--border-color); text-align: center; font-size: 0.75rem; color: var(--text-muted);">
+                            Nhấn <kbd style="background: #eee; padding: 2px 5px; border-radius: 4px; border: 1px solid #ccc;">Enter</kbd> để xem tất cả
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Action Group -->
@@ -306,22 +316,37 @@ export const renderTopbar = (container) => {
         const filteredTasks = allData.tasks.filter(t => t.title.toLowerCase().includes(query) || (t.description && t.description.toLowerCase().includes(query)));
         const filteredPlans = allData.plans.filter(p => p.title.toLowerCase().includes(query) || (p.description && p.description.toLowerCase().includes(query)));
 
-        const results = [
-            ...filteredTasks.map(t => ({ ...t, type: 'Nhiệm vụ', icon: 'fa-check-double', color: '#6c5ce7' })),
-            ...filteredPlans.map(p => ({ ...p, type: 'Kế hoạch', icon: 'fa-calendar-alt', color: 'var(--info)' }))
+        let results = [
+            ...filteredTasks.map(t => ({ ...t, type: 'Nhiệm vụ', icon: 'fa-check-double', color: '#6c5ce7', hash: `#/tasks?id=${t.id}` })),
+            ...filteredPlans.map(p => ({ ...p, type: 'Kế hoạch', icon: 'fa-calendar-alt', color: 'var(--info)', hash: `#/planning?id=${p.id}` }))
         ];
 
+        // Add special "Go to" actions if query matches keywords
+        if (query.includes('lịch') || query.includes('cal') || query.includes('plan')) {
+            results.unshift({
+                id: 'go-planning',
+                title: 'Xem Lịch làm việc (Planning)',
+                type: 'Truy cập nhanh',
+                icon: 'fa-calendar-day',
+                color: '#ff9f43',
+                hash: '#/planning'
+            });
+        }
+
         if (results.length === 0) {
-            searchList.innerHTML = `<div style="padding: 30px; text-align: center; color: var(--text-muted);">Không tìm thấy kết quả cho "<b>${query}</b>"</div>`;
+            searchList.innerHTML = `<div style="padding: 40px 20px; text-align: center; color: var(--text-muted);">
+                <i class="fas fa-search-minus" style="font-size: 2rem; opacity: 0.2; margin-bottom: 12px; display: block;"></i>
+                Không tìm thấy kết quả cho "<b>${query}</b>"
+            </div>`;
         } else {
             searchList.innerHTML = results.map(item => `
-                <div class="search-item" onclick="window.location.hash='#/tasks'">
+                <div class="search-item" onclick="window.location.hash='${item.hash}'">
                     <div style="width: 38px; height: 38px; border-radius: 10px; background: ${item.color}15; color: ${item.color}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                         <i class="fas ${item.icon}"></i>
                     </div>
                     <div class="search-item-info">
                         <div class="search-item-title">${item.title}</div>
-                        <div class="search-item-meta">${item.type} • ${item.due_date || item.start_time || 'Đang diễn ra'}</div>
+                        <div class="search-item-meta">${item.type} • ${item.due_date || item.start_time || 'Thường xuyên'}</div>
                     </div>
                 </div>
             `).join('');

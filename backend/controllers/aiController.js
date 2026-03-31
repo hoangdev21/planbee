@@ -3,6 +3,73 @@ const { formatDateForMySQL } = require('../utils/dateFormatter');
 const NotificationController = require('./notificationController');
 const { sendSimpleMessage } = require('../services/telegramSender');
 
+// Cấu hình nhiều API Key để xoay vòng khi hết lượt (Rate Limit)
+const groqKeys = [
+    process.env.GROQ_API_KEY_1,
+    process.env.GROQ_API_KEY_2,
+    process.env.GROQ_API_KEY_3,
+    process.env.GROQ_API_KEY_4,
+    process.env.GROQ_API_KEY_5,
+    process.env.GROQ_API_KEY_6,
+    process.env.GROQ_API_KEY_7
+].filter(k => k && k.trim() !== '');
+
+let currentKeyIndex = 0;
+
+async function fetchWithRotation(body) {
+    if (groqKeys.length === 0) {
+        throw new Error("Chưa cấu hình GROQ_API_KEY nào trong .env");
+    }
+
+    let lastError = null;
+    // Thử tối đa qua tất cả các key nếu bị rate limit
+    for (let i = 0; i < groqKeys.length; i++) {
+        const index = (currentKeyIndex + i) % groqKeys.length;
+        const key = groqKeys[index];
+
+        try {
+            const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+                method: "POST",
+                headers: { 
+                    "Authorization": `Bearer ${key}`, 
+                    "Content-Type": "application/json" 
+                },
+                body: JSON.stringify(body)
+            });
+
+            const data = await response.json();
+
+            if (data.error) {
+                const errorCode = data.error.code || '';
+                const errorMsg = data.error.message || '';
+                console.warn(`[Groq Key ${index + 1}] Error: ${errorCode} - ${errorMsg}`);
+
+                // Nếu lỗi do hết lượt (rate limit), thử key tiếp theo
+                if (errorCode === 'rate_limit_exceeded' || response.status === 429) {
+                    lastError = data.error;
+                    continue;
+                }
+                
+                // Nếu lỗi tool_use_failed, trả về data luôn để controller xử lý fallback
+                if (errorCode === 'tool_use_failed') return data;
+
+                // Các lỗi khác có thể do payload, thử key khác nếu còn
+                lastError = data.error;
+                continue;
+            }
+
+            // Thành công: cập nhật index hiện tại để lần sau dùng tiếp key này
+            currentKeyIndex = index;
+            return data;
+        } catch (err) {
+            console.error(`[Groq Key ${index + 1}] Fetch failed:`, err.message);
+            lastError = err;
+        }
+    }
+
+    throw new Error(lastError ? (lastError.message || JSON.stringify(lastError)) : "Tất cả API Key đều thất bại.");
+}
+
 const aiController = {
     chat: async (req, res) => {
         const { message, history } = req.body;
@@ -21,10 +88,6 @@ const aiController = {
     },
 
     processChat: async (userId, message, history, platform = 'web') => {
-        const groqApiKey = process.env.GROQ_API_KEY;
-        if (!groqApiKey) {
-            throw new Error("GROQ_API_KEY missing.");
-        }
 
         const now = new Date();
         const options = { timeZone: 'Asia/Ho_Chi_Minh', hour12: false };
@@ -198,16 +261,11 @@ ${platform === 'telegram' ? 'TRẢ LỜI TRÊN TELEGRAM: Hãy trả lời cực 
             }
         ];
 
-        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-            method: "POST",
-            headers: { "Authorization": `Bearer ${groqApiKey}`, "Content-Type": "application/json" },
-            body: JSON.stringify({
-                model: "llama-3.3-70b-versatile",
-                messages, tools, tool_choice: "auto", temperature: 0.1
-            })
+        const data = await fetchWithRotation({
+            model: "llama-3.3-70b-versatile",
+            messages, tools, tool_choice: "auto", temperature: 0.1
         });
 
-        const data = await response.json();
         if (data.error) {
             console.error('Groq API Error:', data.error);
             if (data.error.code === 'tool_use_failed') {
@@ -311,19 +369,18 @@ ${platform === 'telegram' ? 'TRẢ LỜI TRÊN TELEGRAM: Hãy trả lời cực 
                 messages.push({ tool_call_id: toolCall.id, role: "tool", name: toolCall.function.name, content: resTool });
             }
 
-            const sR = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-                method: "POST",
-                headers: { "Authorization": `Bearer ${groqApiKey}`, "Content-Type": "application/json" },
-                body: JSON.stringify({ model: "llama-3.3-70b-versatile", messages })
+            const fD = await fetchWithRotation({ 
+                model: "llama-3.3-70b-versatile", 
+                messages 
             });
-            const fD = await sR.json();
+
             if (fD.error) throw new Error(JSON.stringify(fD.error));
             if (!fD.choices || !fD.choices[0]) throw new Error("API returned no choices");
             
             return fD.choices[0].message.content;
         }
 
-        return messageObj.content || "Bee chào bạn 🥰";
+        return messageObj.content || "Bee chào bạn 🥰 Bee có thể giúp gì cho bạn hôm nay?";
     }
 };
 
