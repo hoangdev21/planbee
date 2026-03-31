@@ -3,6 +3,7 @@ import './src/styles/design-system.css';
 import { initChatWidget } from './src/components/ChatWidget.js';
 
 /* 🛡️ PRO-LEVEL SECURITY: ANTI-DEVTOOLS SYSTEM */
+/* 🛡️ PRO-LEVEL SECURITY: ANTI-DEVTOOLS SYSTEM */
 const initSecurity = () => {
     // Only lock down on production (e.g. Vercel, Render)
     const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
@@ -11,10 +12,10 @@ const initSecurity = () => {
     // 1. Block Keyboard Shortcuts & Source View
     document.addEventListener('keydown', (e) => {
         if (
-            e.key === 'F12' ||
-            (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) || // Windows
-            (e.metaKey && e.altKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) || // Mac OS
-            (e.ctrlKey && e.key === 'U') || (e.metaKey && e.key === 'U') // View Source
+            e.key === 'F12' || e.keyCode === 123 ||
+            (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) || 
+            (e.metaKey && e.altKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) || 
+            (e.ctrlKey && e.key === 'U') || (e.metaKey && e.key === 'U') 
         ) {
             e.preventDefault();
             return false;
@@ -24,37 +25,51 @@ const initSecurity = () => {
     // 2. Disable Context Menu
     document.addEventListener('contextmenu', e => e.preventDefault());
 
-    // 3. Heuristic DevTools Detection Loop (Resistant to bundler obfuscation)
-    const freezeCmd = new Function("debugger"); 
-    
-    // We start a rapid interval checking for execution gaps caused by breakpoints/devtools
-    setInterval(() => {
-        const start = performance.now();
-        freezeCmd(); // Intercepted only if DevTools is open
-        const timeDiff = performance.now() - start;
-        
-        // If thread pauses, it indicates DevTools took control
-        if (timeDiff > 100) {
-            document.body.innerHTML = `
-                <div style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:#050505;z-index:9999999;display:flex;align-items:center;justify-content:center;font-family:system-ui, sans-serif;">
-                    <div style="text-align:center;max-width:600px;padding:40px;">
-                        <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" style="margin-bottom: 24px; display:inline-block;">
-                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                        </svg>
-                        <h1 style="font-size: 2.2rem; color: #f8fafc; margin-bottom: 16px; font-weight:800; letter-spacing:-0.5px;">Phát Hiện Sự Cố Bảo Mật</h1>
-                        <p style="font-size: 1.1rem; color: #94a3b8; line-height: 1.6;">Quyền truy cập mã nguồn hệ thống đã bị vô hiệu hóa vì lý do an toàn.<br><br><span style="color:#ef4444;font-weight:700;">Vui lòng TẮT hoàn toàn Developer Tools (F12) và tải lại trang để tiếp tục sử dụng website.</span></p>
-                    </div>
+    // 3. Graceful DevTools Detection (No freezing debugger)
+    const triggerLockdown = () => {
+        document.body.innerHTML = `
+            <div style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:#050505;z-index:9999999;display:flex;align-items:center;justify-content:center;font-family:system-ui, sans-serif;">
+                <div style="text-align:center;max-width:600px;padding:40px;">
+                    <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" style="margin-bottom: 24px; display:inline-block;">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                    </svg>
+                    <h1 style="font-size: 2.2rem; color: #f8fafc; margin-bottom: 16px; font-weight:800; letter-spacing:-0.5px;">Phát Hiện Sự Cố Bảo Mật</h1>
+                    <p style="font-size: 1.1rem; color: #94a3b8; line-height: 1.6;">Hành vi can thiệp DevTools hoặc truy cập mã nguồn đã bị chặn.<br><br><span style="color:#ef4444;font-weight:700;">Vui lòng TẮT hoàn toàn Developer Tools và F5 tải lại trang để tiếp tục trải nghiệm website.</span></p>
                 </div>
-            `;
-            // Erase DOM head & styles to prevent UI dumping
-            document.head.innerHTML = '';
-            document.documentElement.style.overflow = 'hidden';
-            window.stop(); // Stop all network loaders
+            </div>
+        `;
+        document.head.innerHTML = ''; // Wipe CSS and styles
+        document.documentElement.style.overflow = 'hidden';
+        window.stop();
+    };
+
+    // Heuristic 1: Detect Window Size difference (Catches Docked DevTools instantly)
+    const detectDocked = () => {
+        const threshold = 160;
+        if ((window.outerWidth - window.innerWidth > threshold) || 
+            (window.outerHeight - window.innerHeight > threshold)) {
+            triggerLockdown();
         }
+    };
+    window.addEventListener('resize', detectDocked);
+
+    // Heuristic 2: Detect Element Lazy Evaluation (Catches Undocked DevTools)
+    const devtoolsDetector = new Image();
+    Object.defineProperty(devtoolsDetector, 'id', {
+        get: function () {
+            triggerLockdown();
+            throw new Error("DevTools Active");
+        }
+    });
+
+    setInterval(() => {
+        detectDocked();
+        console.log('%c', devtoolsDetector);
+        console.clear(); 
     }, 1000);
 };
-initSecurity(); // Run aggressively at start
+initSecurity();
 
 // State management (simple)
 const state = {
