@@ -3,8 +3,59 @@ const { formatDateForMySQL } = require('../utils/dateFormatter');
 const NotificationController = require('./notificationController');
 const { sendSimpleMessage } = require('../services/telegramSender');
 
+const DEFAULT_SYSTEM_PROMPT = 'Bạn là Bee - Trợ lý AI thông minh và thân thiện.';
+
+let aiInfraReadyPromise = null;
+
+async function ensureAiInfraReady() {
+    if (aiInfraReadyPromise) return aiInfraReadyPromise;
+
+    aiInfraReadyPromise = (async () => {
+        try {
+            await db.execute(`
+                CREATE TABLE IF NOT EXISTS system_config (
+                    \`key\` VARCHAR(50) PRIMARY KEY,
+                    \`value\` TEXT,
+                    \`updated_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            `);
+
+            await db.execute(`
+                CREATE TABLE IF NOT EXISTS chat_logs (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id INT NULL,
+                    message TEXT,
+                    response TEXT,
+                    tokens_used INT DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            `);
+
+            await db.execute(`
+                CREATE TABLE IF NOT EXISTS error_logs (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    error_message TEXT,
+                    stack_trace TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            `);
+
+            await db.execute(
+                'INSERT IGNORE INTO system_config (\`key\`, \`value\`) VALUES (?, ?)',
+                ['ai_system_prompt', DEFAULT_SYSTEM_PROMPT]
+            );
+        } catch (infraError) {
+            // Do not block chat flow when optional infra/log tables are not available.
+            console.warn('[AI Infra] Optional setup failed:', infraError.message);
+        }
+    })();
+
+    return aiInfraReadyPromise;
+}
+
 // Cấu hình nhiều API Key để xoay vòng khi hết lượt (Rate Limit)
 const groqKeys = [
+    process.env.GROQ_API_KEY,
     process.env.GROQ_API_KEY_1,
     process.env.GROQ_API_KEY_2,
     process.env.GROQ_API_KEY_3,
@@ -93,7 +144,7 @@ const aiController = {
         // Mình sẽ xuất ra cả 7 nhưng với trạng thái cho từng slot
         const totalSlots = 7;
         for (let i = 0; i < totalSlots; i++) {
-            const k = process.env[`GROQ_API_KEY_${i + 1}`];
+            const k = process.env[`GROQ_API_KEY_${i + 1}`] || (i === 0 ? process.env.GROQ_API_KEY : '');
             const isActive = k && k.trim();
             
             // Nếu có thống kê thật từ API => dùng nó. Nếu không => mặc định limit 14400.
@@ -126,22 +177,39 @@ const aiController = {
             return res.json({ result });
         } catch (error) {
             console.error('AI Error:', error);
-            const errorMessage = error.message.includes('rate_limit_exceeded') 
-                ? "Bee đang bận một chút do quá tải, bạn chờ vài giây rồi thử lại nhé 🥰🐝" 
-                : "Bee lỗi rồi, thử lại nhé 🥰";
+            const rawMessage = (error && error.message) ? error.message : '';
+
+            let errorMessage = 'Bee lỗi rồi, thử lại nhé 🥰';
+            if (rawMessage.includes('rate_limit_exceeded') || rawMessage.includes('429')) {
+                errorMessage = 'Bee đang bận một chút do quá tải, bạn chờ vài giây rồi thử lại nhé 🥰🐝';
+            } else if (rawMessage.includes('Chưa cấu hình GROQ_API_KEY')) {
+                errorMessage = 'Bee AI chưa được cấu hình API key trên server. Vui lòng thêm GROQ_API_KEY (hoặc GROQ_API_KEY_1..7) ở Render 🐝';
+            } else if (rawMessage.includes('invalid_api_key') || rawMessage.includes('Invalid API Key')) {
+                errorMessage = 'GROQ API key hiện không hợp lệ. Vui lòng cập nhật lại key trên Render 🐝';
+            }
+
             res.status(500).json({ message: errorMessage });
         }
     },
 
     processChat: async (userId, message, history, platform = 'web') => {
+        await ensureAiInfraReady();
+
         const now = new Date();
         const options = { timeZone: 'Asia/Ho_Chi_Minh', hour12: false };
         const currentTime = now.toLocaleString('vi-VN', options);
         const dayOfWeek = now.toLocaleDateString('vi-VN', { ...options, weekday: 'long' });
         
         // 1. Fetch Dynamic System Prompt
-        const [config] = await db.execute('SELECT value FROM system_config WHERE \`key\` = ?', ['ai_system_prompt']);
-        let dbPrompt = config[0] ? config[0].value : "Bạn là Bee - Trợ lý AI.";
+        let dbPrompt = DEFAULT_SYSTEM_PROMPT;
+        try {
+            const [config] = await db.execute('SELECT value FROM system_config WHERE \`key\` = ?', ['ai_system_prompt']);
+            if (config[0] && config[0].value) {
+                dbPrompt = config[0].value;
+            }
+        } catch (promptError) {
+            console.warn('[AI] Using default system prompt:', promptError.message);
+        }
 
         let taskData = [], planData = [], habitData = [];
         const [t] = await db.execute('SELECT id, title, description, status, priority, due_date FROM tasks WHERE user_id = ? AND (status != "completed" OR created_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)) ORDER BY priority DESC, due_date ASC LIMIT 30', [userId]);
@@ -280,7 +348,11 @@ ${platform === 'telegram' ? 'TRẢ LỜI TRÊN TELEGRAM: Hãy trả lời cực 
                 throw new Error(JSON.stringify(data.error));
             }
 
-            const messageObj = data.choices[0].message;
+            const messageObj = data.choices && data.choices[0] ? data.choices[0].message : null;
+            if (!messageObj) {
+                throw new Error('Phản hồi từ Groq không hợp lệ (không có message).');
+            }
+
             let finalResponse = "";
 
             if (messageObj.tool_calls) {
@@ -326,7 +398,9 @@ ${platform === 'telegram' ? 'TRẢ LỜI TRÊN TELEGRAM: Hãy trả lời cực 
                 }
 
                 const secondaryData = await fetchWithRotation({ model: "llama-3.3-70b-versatile", messages });
-                finalResponse = secondaryData.choices[0].message.content;
+                finalResponse = secondaryData.choices && secondaryData.choices[0] && secondaryData.choices[0].message
+                    ? secondaryData.choices[0].message.content
+                    : '';
             } else {
                 finalResponse = messageObj.content;
             }
@@ -337,12 +411,23 @@ ${platform === 'telegram' ? 'TRẢ LỜI TRÊN TELEGRAM: Hãy trả lời cực 
             }
 
             // 2. LOG CHAT
-            await db.execute('INSERT INTO chat_logs (user_id, message, response, tokens_used) VALUES (?, ?, ?, ?)', [userId, message, finalResponse, data.usage?.total_tokens || 0]);
+            try {
+                await db.execute(
+                    'INSERT INTO chat_logs (user_id, message, response, tokens_used) VALUES (?, ?, ?, ?)',
+                    [userId, message, finalResponse, data.usage?.total_tokens || 0]
+                );
+            } catch (logError) {
+                console.warn('[AI] Skip chat_logs insert:', logError.message);
+            }
 
             return finalResponse;
         } catch (error) {
             // 3. LOG ERROR
-            await db.execute('INSERT INTO error_logs (error_message, stack_trace) VALUES (?, ?)', [error.message, error.stack]);
+            try {
+                await db.execute('INSERT INTO error_logs (error_message, stack_trace) VALUES (?, ?)', [error.message, error.stack]);
+            } catch (logError) {
+                console.warn('[AI] Skip error_logs insert:', logError.message);
+            }
             throw error;
         }
     }

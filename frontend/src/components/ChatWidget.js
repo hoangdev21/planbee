@@ -26,6 +26,13 @@ export const initChatWidget = () => {
     addStyles();
 };
 
+const escapeHtml = (text = '') => text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
 const parseActionLinks = (text) => {
     if (!text) return '';
     
@@ -323,7 +330,7 @@ const renderExpanded = (container) => {
                 ${chatHistory.map(msg => `
                     <div class="msg-group msg-${msg.role === 'user' ? 'user' : 'bot'}">
                         <img src="${msg.role === 'user' ? '/user.png' : '/bot-bee.png'}" class="chat-avatar">
-                        <div class="msg-content">${parseActionLinks(msg.content)}</div>
+                        <div class="msg-content">${msg.role === 'user' ? escapeHtml(msg.content || '') : parseActionLinks(msg.content)}</div>
                     </div>
                 `).join('')}
             </div>
@@ -348,7 +355,7 @@ const renderExpanded = (container) => {
     const sendMessage = async () => {
         const text = chatInput.value.trim();
         if (!text) return;
-        msgBox.innerHTML += `<div class="msg-group msg-user"><img src="/user.png" class="chat-avatar"><div class="msg-content">${text}</div></div>`;
+        msgBox.innerHTML += `<div class="msg-group msg-user"><img src="/user.png" class="chat-avatar"><div class="msg-content">${escapeHtml(text)}</div></div>`;
         chatInput.value = '';
         msgBox.scrollTop = msgBox.scrollHeight;
         chatHistory.push({ role: "user", content: text });
@@ -379,7 +386,9 @@ const renderExpanded = (container) => {
         } catch (err) {
             const typingMsg = document.getElementById(typingId);
             if (typingMsg) typingMsg.remove();
-            msgBox.innerHTML += `<div class="msg-group msg-bot error"><img src="/bot-bee.png" class="chat-avatar"><div class="msg-content">Bee lỗi rồi 🥰</div></div>`;
+            const uiError = escapeHtml((err && err.message) ? err.message : 'Bee lỗi rồi 🥰');
+            msgBox.innerHTML += `<div class="msg-group msg-bot error"><img src="/bot-bee.png" class="chat-avatar"><div class="msg-content">${uiError}</div></div>`;
+            msgBox.scrollTop = msgBox.scrollHeight;
         }
     };
 
