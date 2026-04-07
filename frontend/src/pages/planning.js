@@ -31,10 +31,81 @@ const PRESET_COLORS = [
 ];
 
 let syncInterval = null;
+let syncInFlight = false;
+const AUTO_SYNC_INTERVAL_MS = 45000;
+
+const buildCollectionSignature = (items = [], keys = []) =>
+    items
+        .map((item) => keys.map((key) => item?.[key] ?? '').join('~'))
+        .join('|');
+
+const buildPlanningDataSignature = (tasks = [], habits = [], plans = []) => {
+    const taskSig = buildCollectionSignature(tasks, ['id', 'status', 'due_date', 'updated_at', 'title']);
+    const habitSig = buildCollectionSignature(habits, ['id', 'current_streak', 'last_completed', 'updated_at', 'title']);
+    const planSig = buildCollectionSignature(plans, ['id', 'status', 'start_time', 'end_time', 'color', 'updated_at', 'title']);
+    return `${taskSig}::${habitSig}::${planSig}`;
+};
+
+const updatePlanningDataCache = (tasks = [], habits = [], plans = []) => {
+    window.lastTasks = tasks;
+    window.lastHabits = habits;
+    window.lastPlans = plans;
+    window.lastPlanningSignature = buildPlanningDataSignature(tasks, habits, plans);
+};
+
+const getPlanningDataSignature = () => window.lastPlanningSignature || '';
+
+const startPlanningAutoSync = (container, params = {}) => {
+    if (syncInterval) {
+        clearInterval(syncInterval);
+    }
+
+    syncInterval = setInterval(async () => {
+        // Stop polling when user navigates away from planning page.
+        if (!window.location.hash.startsWith('#/planning')) {
+            clearInterval(syncInterval);
+            syncInterval = null;
+            return;
+        }
+
+        if (document.visibilityState !== 'visible' || syncInFlight) {
+            return;
+        }
+
+        syncInFlight = true;
+
+        try {
+            const [tasksRes, habitsRes, plansRes] = await Promise.all([
+                api.get('/tasks/all'), api.get('/habits/all'), api.get('/plans/all')
+            ]);
+
+            const nextTasks = tasksRes.tasks || [];
+            const nextHabits = habitsRes.habits || [];
+            const nextPlans = plansRes.plans || [];
+            const nextSignature = buildPlanningDataSignature(nextTasks, nextHabits, nextPlans);
+
+            // Skip expensive full re-render when data is unchanged.
+            if (nextSignature === getPlanningDataSignature()) {
+                return;
+            }
+
+            updatePlanningDataCache(nextTasks, nextHabits, nextPlans);
+            renderPlanningUI(container, nextTasks, nextHabits, nextPlans, { ...params, noScroll: true });
+        } catch (e) {
+            console.warn('Auto-sync failed', e);
+        } finally {
+            syncInFlight = false;
+        }
+    }, AUTO_SYNC_INTERVAL_MS);
+};
 
 export const renderPlanning = async (container, params = {}) => {
     // Cleanup old interval if exists
-    if (syncInterval) clearInterval(syncInterval);
+    if (syncInterval) {
+        clearInterval(syncInterval);
+        syncInterval = null;
+    }
+    syncInFlight = false;
     
     container.innerHTML = `<div style="padding: 40px; text-align: center; color: var(--text-muted); font-size: 1.1rem; font-weight: 600;">Đang tải lịch trình...</div>`;
     
@@ -71,7 +142,11 @@ export const renderPlanning = async (container, params = {}) => {
             }
         }
 
-        renderPlanningUI(container, finalTasks, habitsRes.habits, finalPlans, params);
+        const finalHabits = habitsRes.habits || [];
+
+        updatePlanningDataCache(finalTasks, finalHabits, finalPlans);
+        renderPlanningUI(container, finalTasks, finalHabits, finalPlans, params);
+        startPlanningAutoSync(container, params);
     } catch (error) {
         container.innerHTML = `<div style="padding: 40px; text-align: center; color: var(--danger);">Lỗi hệ thống: ${error.message}</div>`;
     }
@@ -219,6 +294,8 @@ const buildTimedBlocksForDate = (plans, dayKey) => {
 };
 
 const renderPlanningUI = (container, tasks, habits, plans, params = {}) => {
+    updatePlanningDataCache(tasks, habits, plans);
+
     container.innerHTML = `
         <div class="planning-root fade-in">
             <div class="planning-header">
@@ -571,20 +648,6 @@ const renderPlanningUI = (container, tasks, habits, plans, params = {}) => {
             await renderPlanning(container, { ...params, noScroll: true });
         };
     }
-
-    // AUTO-SYNC (POLLING): Refresh every 30 seconds to catch Telegram updates
-    syncInterval = setInterval(async () => {
-        try {
-            // Only fetch if tab is active to save resources
-            if (document.visibilityState === 'visible') {
-                const [tasksRes, habitsRes, plansRes] = await Promise.all([
-                    api.get('/tasks/all'), api.get('/habits/all'), api.get('/plans/all')
-                ]);
-                // Re-render UI with new data without flashing the whole container
-                renderPlanningUI(container, tasksRes.tasks, habitsRes.habits, plansRes.plans, { ...params, noScroll: true });
-            }
-        } catch (e) { console.warn("Auto-sync failed", e); }
-    }, 30000);
 
     // Ensure style for spin animation
     if (!document.getElementById('planning-animations')) {
