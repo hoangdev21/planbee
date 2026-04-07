@@ -6,6 +6,25 @@ let currentView = 'day'; // 'day', 'week', 'month'
 let editingItem = null;
 let modalTab = 'view'; // 'view' or 'edit'
 
+const toDateTimeLocalValue = (dateInput) => {
+    if (!dateInput) return '';
+    const raw = String(dateInput).trim();
+
+    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}/.test(raw)) {
+        return raw.replace(' ', 'T').slice(0, 16);
+    }
+
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(raw)) {
+        return raw.slice(0, 16);
+    }
+
+    const parsed = new Date(dateInput);
+    if (isNaN(parsed.getTime())) return '';
+
+    const local = new Date(parsed.getTime() - parsed.getTimezoneOffset() * 60000);
+    return local.toISOString().slice(0, 16);
+};
+
 const PRESET_COLORS = [
     '#FFA726', '#66BB6A', '#29B6F6', '#AB47BC', '#EF5350', 
     '#FFEE58', '#78909C', '#F06292', '#26A69A', '#3F51B5', '#D4E157'
@@ -332,14 +351,14 @@ const renderPlanningUI = (container, tasks, habits, plans, params = {}) => {
                             <label style="font-weight:800; font-size:0.8rem; color:var(--text-muted); margin-bottom:8px; display:block;">BẮT ĐẦU</label>
                             <div class="modern-input-wrapper">
                                 <i class="far fa-calendar-alt"></i>
-                                <input type="datetime-local" name="start_time" id="plan-start" value="${item?item.start_time.slice(0,16):''}" required>
+                                <input type="datetime-local" name="start_time" id="plan-start" value="${item ? toDateTimeLocalValue(item.start_time) : ''}" required>
                             </div>
                         </div>
                         <div class="form-group">
                             <label style="font-weight:800; font-size:0.8rem; color:var(--text-muted); margin-bottom:8px; display:block;">KẾT THÚC</label>
                             <div class="modern-input-wrapper">
                                 <i class="far fa-calendar-check"></i>
-                                <input type="datetime-local" name="end_time" id="plan-end" value="${item?item.end_time.slice(0,16):''}" required>
+                                <input type="datetime-local" name="end_time" id="plan-end" value="${item ? toDateTimeLocalValue(item.end_time) : ''}" required>
                             </div>
                         </div>
                     </div>

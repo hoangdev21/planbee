@@ -2,6 +2,11 @@ const db = require('../config/db');
 const { formatDateForMySQL } = require('../utils/dateFormatter');
 const NotificationController = require('./notificationController');
 
+const SHORT_PLAN_MAX_MS = 24 * 60 * 60 * 1000;
+
+const isValidDate = (value) => value instanceof Date && !Number.isNaN(value.getTime());
+const isShortPlanRange = (startDate, endDate) => (endDate.getTime() - startDate.getTime()) < SHORT_PLAN_MAX_MS;
+
 const planController = {
     // Get all user plans
     getPlans: async (req, res) => {
@@ -26,18 +31,29 @@ const planController = {
                 return res.status(400).json({ message: 'Vui lòng nhập tên, thời gian bắt đầu và kết thúc!' });
             }
 
-            const MySQLStart = formatDateForMySQL(start_time);
-            const MySQLEnd = formatDateForMySQL(end_time);
+            const startDate = new Date(start_time);
+            const endDate = new Date(end_time);
 
-            if (new Date(start_time) >= new Date(end_time)) {
+            if (!isValidDate(startDate) || !isValidDate(endDate)) {
+                return res.status(400).json({ message: 'Thời gian không hợp lệ.' });
+            }
+
+            if (startDate >= endDate) {
                 return res.status(400).json({ message: 'Thời gian kết thúc phải sau thời gian bắt đầu!' });
             }
 
-            // Check for overlaps
-            const [overlaps] = await db.execute(
-                'SELECT title FROM plans WHERE user_id = ? AND start_time < ? AND end_time > ?',
-                [req.user.id, MySQLEnd, MySQLStart]
-            );
+            const MySQLStart = formatDateForMySQL(startDate);
+            const MySQLEnd = formatDateForMySQL(endDate);
+
+            // Long plans (>= 24h) are allowed to coexist with hourly plans.
+            // Only short plans (< 24h) are checked for time overlaps.
+            let overlaps = [];
+            if (isShortPlanRange(startDate, endDate)) {
+                [overlaps] = await db.execute(
+                    'SELECT title FROM plans WHERE user_id = ? AND TIMESTAMPDIFF(SECOND, start_time, end_time) < 86400 AND start_time < ? AND end_time > ? LIMIT 1',
+                    [req.user.id, MySQLEnd, MySQLStart]
+                );
+            }
 
             if (overlaps.length > 0) {
                 return res.status(400).json({ 
@@ -101,21 +117,37 @@ const planController = {
             // Check for overlaps if time is updated
             if (updates.start_time || updates.end_time) {
                 // We need the current or new values to check overlaps
-                const [current] = await db.execute('SELECT start_time, end_time FROM plans WHERE id = ?', [id]);
+                const [current] = await db.execute('SELECT start_time, end_time FROM plans WHERE id = ? AND user_id = ?', [id, req.user.id]);
                 if (current.length > 0) {
-                    const MySQLStart = formatDateForMySQL(updates.start_time || current[0].start_time);
-                    const MySQLEnd = formatDateForMySQL(updates.end_time || current[0].end_time);
-                    
-                    const [overlaps] = await db.execute(
-                        'SELECT title FROM plans WHERE user_id = ? AND id != ? AND start_time < ? AND end_time > ?',
-                        [req.user.id, id, MySQLEnd, MySQLStart]
-                    );
+                    const nextStartDate = new Date(updates.start_time || current[0].start_time);
+                    const nextEndDate = new Date(updates.end_time || current[0].end_time);
+
+                    if (!isValidDate(nextStartDate) || !isValidDate(nextEndDate)) {
+                        return res.status(400).json({ message: 'Thời gian không hợp lệ.' });
+                    }
+
+                    if (nextStartDate >= nextEndDate) {
+                        return res.status(400).json({ message: 'Thời gian kết thúc phải sau thời gian bắt đầu!' });
+                    }
+
+                    const MySQLStart = formatDateForMySQL(nextStartDate);
+                    const MySQLEnd = formatDateForMySQL(nextEndDate);
+
+                    let overlaps = [];
+                    if (isShortPlanRange(nextStartDate, nextEndDate)) {
+                        [overlaps] = await db.execute(
+                            'SELECT title FROM plans WHERE user_id = ? AND id != ? AND TIMESTAMPDIFF(SECOND, start_time, end_time) < 86400 AND start_time < ? AND end_time > ? LIMIT 1',
+                            [req.user.id, id, MySQLEnd, MySQLStart]
+                        );
+                    }
 
                     if (overlaps.length > 0) {
                         return res.status(400).json({ 
                             message: `Cập nhật thất bại! Thời gian này bị trùng với kế hoạch: "${overlaps[0].title}".` 
                         });
                     }
+                } else {
+                    return res.status(404).json({ message: 'Không tìm thấy kế hoạch.' });
                 }
             }
 

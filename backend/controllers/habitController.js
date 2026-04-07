@@ -51,7 +51,11 @@ const habitController = {
             // If already completed today, maybe toggle or do nothing
             // For now, let's increment streak if it's a new day
             let newStreak = habit.current_streak;
-            const lastCompleted = habit.last_completed ? habit.last_completed.toISOString().slice(0, 10) : null;
+            const lastCompleted = habit.last_completed
+                ? (habit.last_completed instanceof Date
+                    ? habit.last_completed.toISOString().slice(0, 10)
+                    : String(habit.last_completed).slice(0, 10))
+                : null;
 
             if (lastCompleted !== today) {
                 newStreak += 1;

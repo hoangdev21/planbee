@@ -4,6 +4,24 @@ const NotificationController = require('./notificationController');
 const { sendSimpleMessage } = require('../services/telegramSender');
 
 const DEFAULT_SYSTEM_PROMPT = 'Bạn là Bee - Trợ lý AI thông minh và thân thiện.';
+const SHORT_PLAN_MAX_MS = 24 * 60 * 60 * 1000;
+
+const isValidDate = (value) => value instanceof Date && !Number.isNaN(value.getTime());
+const isShortPlanRange = (startDate, endDate) => (endDate.getTime() - startDate.getTime()) < SHORT_PLAN_MAX_MS;
+const toPlanDate = (dateTimeValue) => String(dateTimeValue || '').slice(0, 10);
+const toPlanTime = (dateTimeValue) => String(dateTimeValue || '').slice(11, 16);
+
+const makeActionTag = (action, params = {}) => {
+    const query = new URLSearchParams();
+
+    for (const [key, value] of Object.entries(params)) {
+        if (value !== undefined && value !== null && String(value).trim() !== '') {
+            query.set(key, String(value));
+        }
+    }
+
+    return `[${action}:${query.toString()}]`;
+};
 
 let aiInfraReadyPromise = null;
 
@@ -354,6 +372,7 @@ ${platform === 'telegram' ? 'TRẢ LỜI TRÊN TELEGRAM: Hãy trả lời cực 
             }
 
             let finalResponse = "";
+            const actionTags = [];
 
             if (messageObj.tool_calls) {
                 messages.push(messageObj);
@@ -366,19 +385,54 @@ ${platform === 'telegram' ? 'TRẢ LỜI TRÊN TELEGRAM: Hãy trả lời cực 
                         await NotificationController.create(userId, `Ghi chú mới: "${args.title}"`, 'task', result.insertId);
                         resTool = "Success";
                     } else if (toolCall.function.name === "add_new_plan") {
-                        const start = formatDateForMySQL(args.start_time);
-                        const end = formatDateForMySQL(args.end_time);
-                        const [overlaps] = await db.execute('SELECT title FROM plans WHERE user_id = ? AND start_time < ? AND end_time > ?', [userId, end, start]);
-                        if (overlaps.length > 0) {
-                            resTool = `Error: Overlap with "${overlaps[0].title}".`;
+                        const startDate = new Date(args.start_time);
+                        const endDate = new Date(args.end_time);
+
+                        if (!isValidDate(startDate) || !isValidDate(endDate) || startDate >= endDate) {
+                            resTool = "Error: Invalid time range.";
                         } else {
-                            const [result] = await db.execute('INSERT INTO plans (user_id, title, start_time, end_time, color) VALUES (?, ?, ?, ?, ?)', [userId, args.title, start, end, args.color || '#2196F3']);
-                            await NotificationController.create(userId, `Lập kế hoạch: "${args.title}"`, 'plan', result.insertId);
-                            resTool = "Success";
+                            const start = formatDateForMySQL(startDate);
+                            const end = formatDateForMySQL(endDate);
+
+                            let overlaps = [];
+                            if (isShortPlanRange(startDate, endDate)) {
+                                [overlaps] = await db.execute(
+                                    'SELECT title FROM plans WHERE user_id = ? AND TIMESTAMPDIFF(SECOND, start_time, end_time) < 86400 AND start_time < ? AND end_time > ? LIMIT 1',
+                                    [userId, end, start]
+                                );
+                            }
+
+                            if (overlaps.length > 0) {
+                                resTool = `Error: Overlap with "${overlaps[0].title}".`;
+                            } else {
+                                const normalizedColor = args.color || '#2196F3';
+                                const [result] = await db.execute('INSERT INTO plans (user_id, title, start_time, end_time, color) VALUES (?, ?, ?, ?, ?)', [userId, args.title, start, end, normalizedColor]);
+                                await NotificationController.create(userId, `Lập kế hoạch: "${args.title}"`, 'plan', result.insertId);
+                                resTool = "Success";
+
+                                if (platform === 'web') {
+                                    actionTags.push(makeActionTag('view_plan', {
+                                        id: result.insertId,
+                                        title: args.title,
+                                        date: toPlanDate(start),
+                                        time: toPlanTime(start),
+                                        start_time: start,
+                                        end_time: end,
+                                        color: normalizedColor,
+                                        view: 'day'
+                                    }));
+                                }
+                            }
                         }
                     } else if (toolCall.function.name === "add_new_habit") {
                         await db.execute('INSERT INTO habits (user_id, title, description, frequency, preferred_time) VALUES (?, ?, ?, ?, ?)', [userId, args.title, args.description || '', args.frequency || 'daily', args.preferred_time || null]);
                         resTool = "Success";
+
+                        if (platform === 'web') {
+                            actionTags.push(makeActionTag('view_habit', {
+                                title: args.title
+                            }));
+                        }
                     } else if (toolCall.function.name === "update_status") {
                         const title = (args.title || "").trim();
                         const [upT] = await db.execute('UPDATE tasks SET status = ? WHERE user_id = ? AND title = ?', [args.status, userId, title]);
@@ -390,9 +444,38 @@ ${platform === 'telegram' ? 'TRẢ LỜI TRÊN TELEGRAM: Hãy trả lời cực 
                     } else if (toolCall.function.name === "delete_item") {
                         const title = (args.title || "").trim();
                         if (args.type === "task") await db.execute('DELETE FROM tasks WHERE user_id = ? AND title = ?', [userId, title]);
-                        else if (args.type === "plan") await db.execute('DELETE FROM plans WHERE user_id = ? AND title = ?', [userId, title]);
-                        else if (args.type === "habit") await db.execute('DELETE FROM habits WHERE user_id = ? AND title = ?', [userId, title]);
-                        resTool = "Success";
+                        else if (args.type === "plan") {
+                            const [planRows] = await db.execute(
+                                'SELECT id, title, start_time, end_time, color FROM plans WHERE user_id = ? AND title = ? ORDER BY start_time DESC LIMIT 1',
+                                [userId, title]
+                            );
+
+                            if (planRows.length === 0) {
+                                resTool = "Not found.";
+                            } else {
+                                const plan = planRows[0];
+                                await db.execute('DELETE FROM plans WHERE id = ? AND user_id = ?', [plan.id, userId]);
+                                resTool = "Success";
+
+                                if (platform === 'web') {
+                                    actionTags.push(makeActionTag('delete_plan', {
+                                        id: plan.id,
+                                        title: plan.title,
+                                        date: toPlanDate(plan.start_time),
+                                        time: toPlanTime(plan.start_time),
+                                        start_time: plan.start_time,
+                                        end_time: plan.end_time,
+                                        color: plan.color || '#FF5252',
+                                        view: 'day'
+                                    }));
+                                }
+                            }
+                        } else if (args.type === "habit") {
+                            await db.execute('DELETE FROM habits WHERE user_id = ? AND title = ?', [userId, title]);
+                            resTool = "Success";
+                        } else {
+                            resTool = "Not found.";
+                        }
                     }
                     messages.push({ tool_call_id: toolCall.id, role: "tool", name: toolCall.function.name, content: resTool });
                 }
@@ -408,6 +491,11 @@ ${platform === 'telegram' ? 'TRẢ LỜI TRÊN TELEGRAM: Hãy trả lời cực 
             // Dọn dẹp lỗi output dư thừa (nếu có)
             if (finalResponse) {
                 finalResponse = finalResponse.replace(/\[\]/g, '').trim();
+            }
+
+            if (platform === 'web' && actionTags.length > 0) {
+                const baseText = finalResponse && finalResponse.trim() ? finalResponse.trim() : 'Xong rồi nè 🐝';
+                finalResponse = `${baseText}\n${actionTags.join('\n')}`;
             }
 
             // 2. LOG CHAT

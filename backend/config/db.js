@@ -7,6 +7,8 @@ const pool = mysql.createPool({
     password: process.env.DB_PASS || '',
     database: process.env.DB_NAME || 'planbee_db',
     port: process.env.DB_PORT || 3306,
+    // Keep DATETIME/TIMESTAMP as raw strings to avoid implicit timezone conversion.
+    dateStrings: true,
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
