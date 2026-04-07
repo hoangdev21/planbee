@@ -1,4 +1,31 @@
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000') + '/api';
+const PROD_BACKEND_FALLBACK = 'https://planbee-i8ua.onrender.com';
+
+const normalizeApiBaseUrl = () => {
+    const configuredBase = import.meta.env.VITE_API_BASE_URL;
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const fallbackBase = isLocal ? 'http://localhost:5000' : PROD_BACKEND_FALLBACK;
+
+    let baseUrl = (configuredBase || fallbackBase).trim().replace(/\/+$/, '');
+
+    // Auto-fix a common deployment mistake: API base points to frontend domain.
+    try {
+        const parsed = new URL(baseUrl);
+        if (!isLocal && parsed.hostname === window.location.hostname) {
+            baseUrl = PROD_BACKEND_FALLBACK;
+        }
+    } catch {
+        baseUrl = fallbackBase;
+    }
+
+    // Prevent duplicated /api when env var already includes /api.
+    if (!baseUrl.endsWith('/api')) {
+        baseUrl = `${baseUrl}/api`;
+    }
+
+    return baseUrl;
+};
+
+const API_BASE_URL = normalizeApiBaseUrl();
 
 const api = {
     showBeeAlert(message) {
@@ -44,7 +71,21 @@ const api = {
 
         try {
             const response = await fetch(url, defaultOptions);
-            const data = await response.json();
+            const rawText = await response.text();
+            let data = {};
+
+            if (rawText) {
+                try {
+                    data = JSON.parse(rawText);
+                } catch {
+                    const isHtmlResponse = rawText.trim().startsWith('<');
+                    if (isHtmlResponse) {
+                        throw new Error(`API trả về HTML thay vì JSON. Hãy kiểm tra VITE_API_BASE_URL (${API_BASE_URL}).`);
+                    }
+
+                    throw new Error(`Server trả về dữ liệu không hợp lệ (HTTP ${response.status}).`);
+                }
+            }
             
             if (!response.ok) {
                 if (response.status === 401) {

@@ -12,20 +12,34 @@ const reminderService = require('./services/reminderService');
 reminderService(); // Start reminder service
 
 // Middleware
+const parseOriginList = (originValue = '') =>
+    originValue
+        .split(',')
+        .map((origin) => origin.trim().replace(/\/+$/, ''))
+        .filter(Boolean);
+
+const envOrigins = parseOriginList(process.env.FRONTEND_URLS || process.env.FRONTEND_URL || '');
+
 const ALLOWED_ORIGINS = [
-    process.env.FRONTEND_URL,
+    ...envOrigins,
+    'https://www.planbee.me',
+    'https://planbee.me',
     'http://localhost:5173',
     'http://localhost:3000',
     'http://127.0.0.1:5173',
     'http://127.0.0.1:3000',
 ].filter(Boolean);
 
+const UNIQUE_ALLOWED_ORIGINS = [...new Set(ALLOWED_ORIGINS)];
+
 app.use(cors({
     origin: (origin, callback) => {
-        if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+        const normalizedOrigin = origin ? origin.replace(/\/+$/, '') : origin;
+
+        if (!normalizedOrigin || UNIQUE_ALLOWED_ORIGINS.includes(normalizedOrigin)) {
             callback(null, true);
         } else {
-            console.warn(`CORS blocked request from: ${origin}`);
+            console.warn(`CORS blocked request from: ${normalizedOrigin}`);
             callback(new Error('CORS not allowed'));
         }
     },
@@ -61,8 +75,23 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin', adminRoutes);
 
+// Keep API responses JSON-only, even for unknown endpoints.
+app.use('/api', (req, res) => {
+    res.status(404).json({
+        message: `API endpoint không tồn tại: ${req.method} ${req.originalUrl}`
+    });
+});
+
 // Error Handling
 app.use((err, req, res, next) => {
+    if (err.message === 'CORS not allowed') {
+        return res.status(403).json({ message: 'Origin không được phép truy cập API.' });
+    }
+
+    if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+        return res.status(400).json({ message: 'JSON body không hợp lệ.' });
+    }
+
     console.error('Server Error:', err.stack);
     res.status(500).json({ message: 'Lỗi hệ thống!' });
 });
