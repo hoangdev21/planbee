@@ -1,13 +1,13 @@
 const db = require('../config/db');
 const { formatDateForMySQL } = require('../utils/dateFormatter');
+const { pickUniquePlanColor } = require('../utils/planColor');
+const { isShortPlanRange, findLongPlanDailyConflict } = require('../utils/planOverlap');
 const NotificationController = require('./notificationController');
 const { sendSimpleMessage } = require('../services/telegramSender');
 
 const DEFAULT_SYSTEM_PROMPT = 'Bạn là Bee - Trợ lý AI thông minh và thân thiện.';
-const SHORT_PLAN_MAX_MS = 24 * 60 * 60 * 1000;
 
 const isValidDate = (value) => value instanceof Date && !Number.isNaN(value.getTime());
-const isShortPlanRange = (startDate, endDate) => (endDate.getTime() - startDate.getTime()) < SHORT_PLAN_MAX_MS;
 const toPlanDate = (dateTimeValue) => String(dateTimeValue || '').slice(0, 10);
 const toPlanTime = (dateTimeValue) => String(dateTimeValue || '').slice(11, 16);
 
@@ -400,12 +400,37 @@ ${platform === 'telegram' ? 'TRẢ LỜI TRÊN TELEGRAM: Hãy trả lời cực 
                                     'SELECT title FROM plans WHERE user_id = ? AND TIMESTAMPDIFF(SECOND, start_time, end_time) < 86400 AND start_time < ? AND end_time > ? LIMIT 1',
                                     [userId, end, start]
                                 );
+
+                                if (overlaps.length === 0) {
+                                    const [longPlans] = await db.execute(
+                                        'SELECT id, title, start_time, end_time FROM plans WHERE user_id = ? AND TIMESTAMPDIFF(SECOND, start_time, end_time) >= 86400 AND DATE(start_time) <= ? AND DATE(end_time) >= ?',
+                                        [userId, toPlanDate(end), toPlanDate(start)]
+                                    );
+
+                                    const conflict = findLongPlanDailyConflict({
+                                        candidateStart: start,
+                                        candidateEnd: end,
+                                        longPlans
+                                    });
+
+                                    if (conflict) {
+                                        overlaps = [{ title: conflict.title }];
+                                    }
+                                }
                             }
 
                             if (overlaps.length > 0) {
                                 resTool = `Error: Overlap with "${overlaps[0].title}".`;
                             } else {
-                                const normalizedColor = args.color || '#2196F3';
+                                const [usedColorRows] = await db.execute(
+                                    'SELECT color FROM plans WHERE user_id = ? AND color IS NOT NULL',
+                                    [userId]
+                                );
+                                const normalizedColor = pickUniquePlanColor(
+                                    usedColorRows.map((row) => row.color),
+                                    args.color
+                                );
+
                                 const [result] = await db.execute('INSERT INTO plans (user_id, title, start_time, end_time, color) VALUES (?, ?, ?, ?, ?)', [userId, args.title, start, end, normalizedColor]);
                                 await NotificationController.create(userId, `Lập kế hoạch: "${args.title}"`, 'plan', result.insertId);
                                 resTool = "Success";

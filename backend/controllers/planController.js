@@ -1,11 +1,71 @@
 const db = require('../config/db');
 const { formatDateForMySQL } = require('../utils/dateFormatter');
+const { pickUniquePlanColor, normalizeHexColor } = require('../utils/planColor');
+const { isShortPlanRange, findLongPlanDailyConflict } = require('../utils/planOverlap');
 const NotificationController = require('./notificationController');
 
-const SHORT_PLAN_MAX_MS = 24 * 60 * 60 * 1000;
-
 const isValidDate = (value) => value instanceof Date && !Number.isNaN(value.getTime());
-const isShortPlanRange = (startDate, endDate) => (endDate.getTime() - startDate.getTime()) < SHORT_PLAN_MAX_MS;
+
+const getUsedPlanColors = async (userId, excludePlanId = null) => {
+    if (excludePlanId !== null) {
+        const [rows] = await db.execute(
+            'SELECT color FROM plans WHERE user_id = ? AND id != ? AND color IS NOT NULL',
+            [userId, excludePlanId]
+        );
+        return rows.map((row) => row.color).filter(Boolean);
+    }
+
+    const [rows] = await db.execute(
+        'SELECT color FROM plans WHERE user_id = ? AND color IS NOT NULL',
+        [userId]
+    );
+    return rows.map((row) => row.color).filter(Boolean);
+};
+
+const getLongPlansByRange = async (userId, startDateTime, endDateTime, excludePlanId = null) => {
+    const startDate = String(startDateTime).slice(0, 10);
+    const endDate = String(endDateTime).slice(0, 10);
+
+    if (excludePlanId !== null) {
+        const [rows] = await db.execute(
+            'SELECT id, title, start_time, end_time FROM plans WHERE user_id = ? AND id != ? AND TIMESTAMPDIFF(SECOND, start_time, end_time) >= 86400 AND DATE(start_time) <= ? AND DATE(end_time) >= ?',
+            [userId, excludePlanId, endDate, startDate]
+        );
+        return rows;
+    }
+
+    const [rows] = await db.execute(
+        'SELECT id, title, start_time, end_time FROM plans WHERE user_id = ? AND TIMESTAMPDIFF(SECOND, start_time, end_time) >= 86400 AND DATE(start_time) <= ? AND DATE(end_time) >= ?',
+        [userId, endDate, startDate]
+    );
+    return rows;
+};
+
+const rebalancePlanColors = async (userId, plans) => {
+    const usedColors = [];
+    const updates = [];
+
+    for (const plan of plans) {
+        const nextColor = pickUniquePlanColor(usedColors, plan.color);
+        usedColors.push(nextColor);
+
+        if (normalizeHexColor(plan.color) !== nextColor) {
+            plan.color = nextColor;
+            updates.push(
+                db.execute(
+                    'UPDATE plans SET color = ? WHERE id = ? AND user_id = ?',
+                    [nextColor, plan.id, userId]
+                )
+            );
+        }
+    }
+
+    if (updates.length > 0) {
+        await Promise.all(updates);
+    }
+
+    return plans;
+};
 
 const planController = {
     // Get all user plans
@@ -15,7 +75,9 @@ const planController = {
                 'SELECT * FROM plans WHERE user_id = ? ORDER BY start_time ASC',
                 [req.user.id]
             );
-            res.json({ plans });
+
+            const normalizedPlans = await rebalancePlanColors(req.user.id, plans);
+            res.json({ plans: normalizedPlans });
         } catch (error) {
             console.error('Get plans error:', error);
             res.status(500).json({ message: 'Lỗi khi lấy kế hoạch.' });
@@ -45,14 +107,25 @@ const planController = {
             const MySQLStart = formatDateForMySQL(startDate);
             const MySQLEnd = formatDateForMySQL(endDate);
 
-            // Long plans (>= 24h) are allowed to coexist with hourly plans.
-            // Only short plans (< 24h) are checked for time overlaps.
             let overlaps = [];
             if (isShortPlanRange(startDate, endDate)) {
                 [overlaps] = await db.execute(
                     'SELECT title FROM plans WHERE user_id = ? AND TIMESTAMPDIFF(SECOND, start_time, end_time) < 86400 AND start_time < ? AND end_time > ? LIMIT 1',
                     [req.user.id, MySQLEnd, MySQLStart]
                 );
+
+                if (overlaps.length === 0) {
+                    const longPlans = await getLongPlansByRange(req.user.id, MySQLStart, MySQLEnd);
+                    const conflict = findLongPlanDailyConflict({
+                        candidateStart: MySQLStart,
+                        candidateEnd: MySQLEnd,
+                        longPlans
+                    });
+
+                    if (conflict) {
+                        overlaps = [{ title: conflict.title }];
+                    }
+                }
             }
 
             if (overlaps.length > 0) {
@@ -61,9 +134,12 @@ const planController = {
                 });
             }
 
+            const usedColors = await getUsedPlanColors(req.user.id);
+            const selectedColor = pickUniquePlanColor(usedColors, color);
+
             const [result] = await db.execute(
                 'INSERT INTO plans (user_id, title, description, start_time, end_time, color, priority) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                [req.user.id, title, description || '', MySQLStart, MySQLEnd, color || '#FFA726', priority || 'medium']
+                [req.user.id, title, description || '', MySQLStart, MySQLEnd, selectedColor, priority || 'medium']
             );
 
             await NotificationController.create(req.user.id, `Bạn đã lập kế hoạch mới: "${title}"`, 'plan', result.insertId);
@@ -80,7 +156,7 @@ const planController = {
                 await sendSimpleMessage(req.user.id, tgMsg);
             }
 
-            res.status(201).json({ id: result.insertId, message: 'Lập kế hoạch thành công!' });
+            res.status(201).json({ id: result.insertId, color: selectedColor, message: 'Lập kế hoạch thành công!' });
         } catch (error) {
             console.error('Create plan error:', error);
             res.status(500).json({ message: 'Lỗi khi tạo kế hoạch.' });
@@ -91,7 +167,12 @@ const planController = {
     updatePlan: async (req, res) => {
         try {
             const { id } = req.params;
-            const updates = req.body;
+            const updates = { ...req.body };
+
+            if (updates.color !== undefined) {
+                const usedColors = await getUsedPlanColors(req.user.id, id);
+                updates.color = pickUniquePlanColor(usedColors, updates.color);
+            }
             
             // Build dynamic query
             const fields = [];
@@ -139,6 +220,19 @@ const planController = {
                             'SELECT title FROM plans WHERE user_id = ? AND id != ? AND TIMESTAMPDIFF(SECOND, start_time, end_time) < 86400 AND start_time < ? AND end_time > ? LIMIT 1',
                             [req.user.id, id, MySQLEnd, MySQLStart]
                         );
+
+                        if (overlaps.length === 0) {
+                            const longPlans = await getLongPlansByRange(req.user.id, MySQLStart, MySQLEnd, id);
+                            const conflict = findLongPlanDailyConflict({
+                                candidateStart: MySQLStart,
+                                candidateEnd: MySQLEnd,
+                                longPlans
+                            });
+
+                            if (conflict) {
+                                overlaps = [{ title: conflict.title }];
+                            }
+                        }
                     }
 
                     if (overlaps.length > 0) {

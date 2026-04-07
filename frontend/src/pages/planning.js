@@ -85,6 +85,139 @@ const getPlanType = (p) => {
     return 'hourly';
 };
 
+const getMinutesOfDay = (dateValue) => {
+    const d = new Date(dateValue);
+    if (isNaN(d.getTime())) return 0;
+    return (d.getHours() * 60) + d.getMinutes();
+};
+
+const formatMinuteLabel = (minuteValue) => {
+    const clamped = Math.max(0, Math.min(1440, minuteValue));
+    const hours = Math.floor(clamped / 60);
+    const minutes = clamped % 60;
+    return `${hours}:${minutes.toString().padStart(2, '0')}`;
+};
+
+const buildTimedBlocksForDate = (plans, dayKey) => {
+    const blocks = [];
+
+    for (const plan of plans) {
+        const startDateKey = formatDateToYYYYMMDD(plan.start_time);
+        const endDateKey = formatDateToYYYYMMDD(plan.end_time);
+
+        if (dayKey < startDateKey || dayKey > endDateKey) {
+            continue;
+        }
+
+        const startMinute = getMinutesOfDay(plan.start_time);
+        const endMinute = getMinutesOfDay(plan.end_time);
+        const status = plan.status;
+
+        if (getPlanType(plan) === 'hourly') {
+            if (startDateKey === endDateKey) {
+                blocks.push({
+                    id: plan.id,
+                    title: plan.title,
+                    description: plan.description,
+                    color: plan.color,
+                    status,
+                    startMinute,
+                    endMinute
+                });
+            } else {
+                if (dayKey === startDateKey) {
+                    blocks.push({
+                        id: plan.id,
+                        title: plan.title,
+                        description: plan.description,
+                        color: plan.color,
+                        status,
+                        startMinute,
+                        endMinute: 1440
+                    });
+                }
+
+                if (dayKey > startDateKey && dayKey < endDateKey) {
+                    blocks.push({
+                        id: plan.id,
+                        title: plan.title,
+                        description: plan.description,
+                        color: plan.color,
+                        status,
+                        startMinute: 0,
+                        endMinute: 1440
+                    });
+                }
+
+                if (dayKey === endDateKey) {
+                    blocks.push({
+                        id: plan.id,
+                        title: plan.title,
+                        description: plan.description,
+                        color: plan.color,
+                        status,
+                        startMinute: 0,
+                        endMinute
+                    });
+                }
+            }
+
+            continue;
+        }
+
+        // Long plan: render recurring daily time window block on every day in range.
+        if (startMinute === 0 && (endMinute === 0 || endMinute >= 1439)) {
+            continue;
+        }
+
+        if (startMinute === endMinute) {
+            blocks.push({
+                id: plan.id,
+                title: plan.title,
+                description: plan.description,
+                color: plan.color,
+                status,
+                startMinute: 0,
+                endMinute: 1440
+            });
+            continue;
+        }
+
+        if (endMinute > startMinute) {
+            blocks.push({
+                id: plan.id,
+                title: plan.title,
+                description: plan.description,
+                color: plan.color,
+                status,
+                startMinute,
+                endMinute
+            });
+        } else {
+            blocks.push({
+                id: plan.id,
+                title: plan.title,
+                description: plan.description,
+                color: plan.color,
+                status,
+                startMinute,
+                endMinute: 1440
+            });
+            blocks.push({
+                id: plan.id,
+                title: plan.title,
+                description: plan.description,
+                color: plan.color,
+                status,
+                startMinute: 0,
+                endMinute
+            });
+        }
+    }
+
+    return blocks.filter((block) => block.endMinute > block.startMinute);
+};
+
 const renderPlanningUI = (container, tasks, habits, plans, params = {}) => {
     container.innerHTML = `
         <div class="planning-root fade-in">
@@ -552,7 +685,8 @@ const renderDayView = (t, h, p) => {
     const ds = formatDateToYYYYMMDD(currentDate);
     const dayPlans = p.filter(x => ds >= formatDateToYYYYMMDD(x.start_time) && ds <= formatDateToYYYYMMDD(x.end_time));
     const dayTasks = t.filter(x => (x.due_date && x.due_date.startsWith(ds)) || (x.status !== 'completed' && x.due_date && new Date(x.due_date) < new Date()));
-    const allday = dayPlans.filter(x => getPlanType(x) === 'all-day'), hourly = dayPlans.filter(x => getPlanType(x) === 'hourly');
+    const allday = dayPlans.filter(x => getPlanType(x) === 'all-day');
+    const timedBlocks = buildTimedBlocksForDate(dayPlans, ds);
     
     let html = `<div class="day-view-top" style="padding:16px 24px; border-bottom:2px solid var(--border-color); background:var(--sidebar-bg); display:flex; flex-direction:column; gap:12px;">
         <div style="display:flex; gap:10px; align-items:center;">
@@ -576,22 +710,13 @@ const renderDayView = (t, h, p) => {
     </div>`;
     const rowH = 65;
     let grid = Array(24).fill(0).map((_,h)=>`<div class="time-row" style="height:${rowH}px;"><div class="time-label">${h}:00</div><div class="time-slot" style="background:${h%2===0?'rgba(0,0,0,0.01)':'transparent'}"></div></div>`).join('');
-    let items = hourly.map(x => {
-        const s = new Date(x.start_time), e = new Date(x.end_time);
-        
-        // Calculate top offset
-        const top = (s.getHours() * rowH) + (s.getMinutes() * (rowH / 60)) + 4;
-        
-        // Calculate height, but CLIP it to not exceed the 24h grid in the current Day View
-        let durationMinutes = (e - s) / 60000;
-        // If it starts today but ends tomorrow, clip duration to end of today (24:00)
-        const dayEnd = new Date(s); dayEnd.setHours(23, 59, 59, 999);
-        if (e > dayEnd) durationMinutes = (dayEnd - s) / 60000;
-        
-        const height = Math.max(durationMinutes * (rowH / 60) - 8, 40);
-        
-        const done = x.status === 'completed';
-        return `<div class="plan-event ${done?'done':''}" data-id="${x.id}" style="top:${top}px; height:${height}px; background:${x.color}; width:280px; left:90px;"><div style="font-size: 0.72rem; font-weight: 900; opacity: 0.85; margin-bottom: 4px; display:flex; align-items:center; justify-content:space-between;"><section><i class="far fa-clock"></i> ${s.getHours()}:${s.getMinutes().toString().padStart(2,'0')} - ${e.getHours()}:${e.getMinutes().toString().padStart(2,'0')}</section>${done?'<img src="/complete.png" style="width:18px; height:18px; object-fit:contain;">':''}</div><div style="font-size:0.92rem; font-weight:900; line-height:1.2; margin-bottom:4px;">${x.title}</div><div style="font-size:0.75rem; font-weight:500; opacity:0.8; line-height:1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${x.description || ''}</div></div>`;
+    let items = timedBlocks.map((block) => {
+        const top = (block.startMinute * (rowH / 60)) + 4;
+        const durationMinutes = block.endMinute - block.startMinute;
+        const height = Math.max((durationMinutes * (rowH / 60)) - 8, 40);
+        const done = block.status === 'completed';
+
+        return `<div class="plan-event ${done ? 'done' : ''}" data-id="${block.id}" style="top:${top}px; height:${height}px; background:${block.color}; width:280px; left:90px;"><div style="font-size: 0.72rem; font-weight: 900; opacity: 0.85; margin-bottom: 4px; display:flex; align-items:center; justify-content:space-between;"><section><i class="far fa-clock"></i> ${formatMinuteLabel(block.startMinute)} - ${formatMinuteLabel(block.endMinute)}</section>${done?'<img src="/complete.png" style="width:18px; height:18px; object-fit:contain;">':''}</div><div style="font-size:0.92rem; font-weight:900; line-height:1.2; margin-bottom:4px;">${block.title}</div><div style="font-size:0.75rem; font-weight:500; opacity:0.8; line-height:1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${block.description || ''}</div></div>`;
     }).join('');
     return `<div class="calendar-grid-scroll" style="overflow-y:auto; height:100%">${html}<div style="position:relative; height:${24 * rowH}px;">${grid}${items}</div></div>`;
 };
@@ -624,7 +749,8 @@ const renderWeekView = (t, h, p) => {
         <div class="week-view-sticky-time" style="background:var(--card-bg); position:sticky; left:0; z-index:90;">${Array(24).fill(0).map((_,h)=>`<div style="height:${rowH}px; border-bottom:1px solid var(--border-color); text-align:right; padding:12px; font-size:0.75rem; color:var(--text-muted); font-weight:800">${h}:00</div>`).join('')}</div>
         ${Array(7).fill(0).map((_,i)=>{
             const ds=formatDateToYYYYMMDD(new Date(new Date(start).setDate(start.getDate()+i))); 
-            return `<div style="position:relative; border-right:1px solid var(--border-color);">${Array(24).fill(0).map(()=>`<div style="height:${rowH}px; border-bottom:1px solid var(--border-color)"></div>`).join('')}${p.filter(x=>getPlanType(x)==='hourly'&&formatDateToYYYYMMDD(x.start_time) === ds).map(x=>{const s=new Date(x.start_time),e=new Date(x.end_time); const top=(s.getHours()*rowH)+(s.getMinutes()*(rowH/60))+4; let dur=(e-s)/60000; const dE=new Date(s); dE.setHours(23,59,59,999); if(e>dE) dur=(dE-s)/60000; const height=Math.max(dur*(rowH/60)-8, 40),done=x.status==='completed'; return `<div class="plan-event ${done?'done':''}" data-id="${x.id}" style="top:${top}px; height:${height}px; width:100%; left:0; background:${x.color};"><div style="font-size: 0.65rem; font-weight: 900; opacity: 0.85; margin-bottom: 2px; display:flex; align-items:center; justify-content:space-between;"><section><i class="far fa-clock"></i> ${s.getHours()}:${s.getMinutes().toString().padStart(2,'0')}</section>${done?'<img src="/complete.png" style="width:14px; height:14px; object-fit:contain;">':''}</div><div style="font-size:0.75rem; font-weight:900; line-height:1.1; word-break:break-all;">${x.title}</div></div>`;}).join('')}</div>`;
+            const dayBlocks = buildTimedBlocksForDate(p, ds);
+            return `<div style="position:relative; border-right:1px solid var(--border-color);">${Array(24).fill(0).map(()=>`<div style="height:${rowH}px; border-bottom:1px solid var(--border-color)"></div>`).join('')}${dayBlocks.map((block)=>{const top=(block.startMinute*(rowH/60))+4; const duration=block.endMinute-block.startMinute; const height=Math.max(duration*(rowH/60)-8, 40); const done=block.status==='completed'; return `<div class="plan-event ${done?'done':''}" data-id="${block.id}" style="top:${top}px; height:${height}px; width:100%; left:0; background:${block.color};"><div style="font-size: 0.65rem; font-weight: 900; opacity: 0.85; margin-bottom: 2px; display:flex; align-items:center; justify-content:space-between;"><section><i class="far fa-clock"></i> ${formatMinuteLabel(block.startMinute)}</section>${done?'<img src="/complete.png" style="width:14px; height:14px; object-fit:contain;">':''}</div><div style="font-size:0.75rem; font-weight:900; line-height:1.1; word-break:break-all;">${block.title}</div></div>`;}).join('')}</div>`;
         }).join('')}
     </div>`;
     
