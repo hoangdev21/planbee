@@ -7,6 +7,7 @@ const keepAlive = require('./utils/keepAlive');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const HOST = process.env.HOST || '0.0.0.0';
 require('./services/telegramBot'); // Start the bot service
 const reminderService = require('./services/reminderService');
 reminderService(); // Start reminder service
@@ -56,6 +57,15 @@ app.get('/', (req, res) => {
     res.json({ message: 'Welcome to PlanBee API' });
 });
 
+app.get('/health', (req, res) => {
+    res.status(200).json({
+        status: 'ok',
+        service: 'planbee-backend',
+        uptimeSeconds: Math.floor(process.uptime()),
+        timestamp: new Date().toISOString()
+    });
+});
+
 const authRoutes = require('./routes/authRoutes');
 const taskRoutes = require('./routes/taskRoutes');
 const habitRoutes = require('./routes/habitRoutes');
@@ -96,8 +106,8 @@ app.use((err, req, res, next) => {
     res.status(500).json({ message: 'Lỗi hệ thống!' });
 });
 
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+app.listen(PORT, HOST, () => {
+    console.log(`Server is running on ${HOST}:${PORT}`);
     
     // Self-ping to keeps the Render Free-Tier instance alive
     if (process.env.NODE_ENV === 'production') {
