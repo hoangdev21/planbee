@@ -26,6 +26,8 @@ const normalizeApiBaseUrl = () => {
 };
 
 const API_BASE_URL = normalizeApiBaseUrl();
+const PROD_API_BASE_URL = `${PROD_BACKEND_FALLBACK.replace(/\/+$/, '')}/api`;
+const API_BASE_URL_CANDIDATES = [...new Set([API_BASE_URL, PROD_API_BASE_URL])];
 
 const api = {
     showBeeAlert(message) {
@@ -58,7 +60,6 @@ const api = {
     },
 
     async request(endpoint, options = {}) {
-        const url = `${API_BASE_URL}${endpoint}`;
         const token = localStorage.getItem('token');
         
         const defaultOptions = {
@@ -69,45 +70,64 @@ const api = {
             ...options
         };
 
-        try {
-            const response = await fetch(url, defaultOptions);
-            const rawText = await response.text();
-            let data = {};
+        let lastError = null;
 
-            if (rawText) {
-                try {
-                    data = JSON.parse(rawText);
-                } catch {
-                    const isHtmlResponse = rawText.trim().startsWith('<');
-                    if (isHtmlResponse) {
-                        throw new Error(`API trả về HTML thay vì JSON. Hãy kiểm tra VITE_API_BASE_URL (${API_BASE_URL}).`);
-                    }
+        for (let i = 0; i < API_BASE_URL_CANDIDATES.length; i++) {
+            const baseUrl = API_BASE_URL_CANDIDATES[i];
+            const isLastCandidate = i === API_BASE_URL_CANDIDATES.length - 1;
 
-                    throw new Error(`Server trả về dữ liệu không hợp lệ (HTTP ${response.status}).`);
-                }
-            }
-            
-            if (!response.ok) {
-                if (response.status === 401) {
-                    localStorage.removeItem('token');
-                    if (window.location.hash !== '#/login' && window.location.hash !== '#/register' && window.location.hash !== '#/') {
-                        window.location.hash = '#/login';
+            try {
+                const response = await fetch(`${baseUrl}${endpoint}`, defaultOptions);
+                const rawText = await response.text();
+                let data = {};
+
+                if (rawText) {
+                    try {
+                        data = JSON.parse(rawText);
+                    } catch {
+                        const isHtmlResponse = rawText.trim().startsWith('<');
+                        if (isHtmlResponse) {
+                            throw new Error(`API trả về HTML thay vì JSON. Hãy kiểm tra VITE_API_BASE_URL (${baseUrl}).`);
+                        }
+
+                        throw new Error(`Server trả về dữ liệu không hợp lệ (HTTP ${response.status}).`);
                     }
                 }
-                
-                // Show visual alert for validation/conflict errors (400)
-                if (response.status === 400 && data.message) {
-                    this.showBeeAlert(data.message);
+
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        localStorage.removeItem('token');
+                        if (window.location.hash !== '#/login' && window.location.hash !== '#/register' && window.location.hash !== '#/') {
+                            window.location.hash = '#/login';
+                        }
+                    }
+
+                    // Show visual alert for validation/conflict errors (400)
+                    if (response.status === 400 && data.message) {
+                        this.showBeeAlert(data.message);
+                    }
+
+                    throw new Error(data.message || 'Something went wrong');
                 }
-                
-                throw new Error(data.message || 'Something went wrong');
+
+                return data;
+            } catch (error) {
+                lastError = error;
+
+                const message = String(error && error.message ? error.message : '');
+                const isNetworkError = error instanceof TypeError || /Failed to fetch|NetworkError/i.test(message);
+
+                if (isNetworkError && !isLastCandidate) {
+                    console.warn(`API unreachable at ${baseUrl}, trying fallback...`);
+                    continue;
+                }
+
+                console.error('API Error:', error.message);
+                throw error;
             }
-            
-            return data;
-        } catch (error) {
-            console.error('API Error:', error.message);
-            throw error;
         }
+
+        throw lastError || new Error('Không thể kết nối máy chủ.');
     },
 
     get(endpoint) { return this.request(endpoint, { method: 'GET' }); },
