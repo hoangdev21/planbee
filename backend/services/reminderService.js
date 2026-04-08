@@ -13,11 +13,11 @@ const reminderService = () => {
         const in5MinutesStr = formatDateForMySQL(in5Minutes); 
 
         try {
-            // 1. Check for PLANS (5 minutes before start)
-            // Notify if a plan starts in 5 minutes and reminder not sent
+            // 1. Check for PLANS (Strictly 5 minutes before start)
+            // Selecting plans that start within the next 5-6 minutes window
             const [plans] = await db.execute(
-                'SELECT * FROM plans WHERE reminder_sent = 0 AND start_time <= ? AND status != "completed"',
-                [in5MinutesStr]
+                'SELECT * FROM plans WHERE reminder_sent = 0 AND start_time > ? AND start_time <= ? AND status != "completed"',
+                [nowStr, in5MinutesStr]
             );
 
             for (const plan of plans) {

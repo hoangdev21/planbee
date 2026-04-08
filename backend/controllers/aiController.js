@@ -35,8 +35,7 @@ const makeActionTag = (action, params = {}) => {
 let aiInfraReadyPromise = null;
 
 async function ensureAiInfraReady() {
-    // Force run to update system prompts
-    // if (aiInfraReadyPromise) return aiInfraReadyPromise;
+    if (aiInfraReadyPromise) return aiInfraReadyPromise;
 
     aiInfraReadyPromise = (async () => {
         try {
@@ -109,7 +108,7 @@ async function fetchWithRotation(body) {
 
         try {
             const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), 20000); // 20s timeout
+            const timeout = setTimeout(() => controller.abort(), 10000); // 10s timeout
 
             const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
                 method: "POST",
