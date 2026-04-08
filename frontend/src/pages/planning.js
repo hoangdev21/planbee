@@ -613,7 +613,26 @@ const renderPlanningUI = (container, tasks, habits, plans, params = {}) => {
                 document.getElementById('selected-color').value=c.dataset.color;
             });
             document.getElementById('c-btn').onclick=()=>item?(modalTab='view',renderModalBody(item,type)):(document.getElementById('plan-modal').style.display='none');
-            f.onsubmit=async(e)=>{e.preventDefault(); await api.post('/plans/add',Object.fromEntries(new FormData(f).entries())); document.getElementById('plan-modal').style.display='none'; renderPlanning(window.planningContainer);};
+            f.onsubmit = async (e) => {
+                e.preventDefault();
+                const data = Object.fromEntries(new FormData(f).entries());
+                try {
+                    if (item) {
+                        const url = type === 'plan' ? `/plans/update/${item.id}` : `/tasks/update/${item.id}`;
+                        // For tasks, we use due_date instead of start_time/end_time
+                        if (type === 'task') {
+                            data.due_date = data.start_time;
+                        }
+                        await api.put(url, data);
+                    } else {
+                        await api.post('/plans/add', data);
+                    }
+                    document.getElementById('plan-modal').style.display = 'none';
+                    renderPlanning(window.planningContainer);
+                } catch (err) {
+                    console.error('Submit error:', err);
+                }
+            };
         }
     };
 

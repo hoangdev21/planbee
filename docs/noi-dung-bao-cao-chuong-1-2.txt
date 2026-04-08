@@ -1,0 +1,288 @@
+CHUONG 1: CO SO LY THUYET
+
+1.1 Tong quan ve de tai
+
+1.1.1 Gioi thieu bai toan
+Trong thuc te, sinh vien, nguoi di lam va nhom lam viec nho thuong gap mot van de chung: co rat nhieu viec can lam, nhieu lich hen, nhieu muc tieu ca nhan, nhung khong co mot cong cu duy nhat de quan ly tap trung. Neu dung rieng le ghi chu, lich dien thoai va cac app chat, nguoi dung de bi sot viec, nhac viec khong dung luc, va kho nhin duoc tong the tien do moi ngay.
+
+Tu bai toan do, de tai PlanBee huong den viec xay dung mot he thong quan ly nang suat ca nhan theo mo hinh "tat ca trong mot": quan ly nhiem vu, lap ke hoach theo khung gio, theo doi thoi quen, thong bao nhac viec va ho tro tro ly AI. Diem quan trong cua de tai la ket hop nen web va Telegram, de nguoi dung van duoc nhac viec ngay ca khi khong mo trang web.
+
+1.1.2 Muc tieu de tai
+Muc tieu tong the cua de tai la xay dung mot ung dung web quan ly cong viec va thoi gian de su dung hang ngay, de trien khai that tren moi truong cloud, khong chi dung o muc demo noi bo.
+
+Tu muc tieu tong the, de tai dat cac muc tieu cu the:
+- Quan ly duoc tai khoan nguoi dung va phan quyen co ban (nguoi dung thuong, quan tri vien).
+- Quan ly duoc 3 nhom du lieu cot loi: nhiem vu, ke hoach theo thoi gian, va thoi quen.
+- Co co che thong bao trong he thong va nhac viec qua Telegram.
+- Tich hop tro ly AI de nguoi dung co the tao/sua/xoa mot so noi dung nhanh qua hoi thoai.
+- Co trang quan tri de theo doi so lieu van hanh va cau hinh prompt AI.
+- Co kha nang deploy frontend va backend doc lap, ket noi CSDL cloud.
+
+1.1.3 Pham vi du an
+
+1.1.3.1 Pham vi bao gom
+Trong phien ban hien tai, de tai bao gom cac phan chinh sau:
+- He thong dang ky, dang nhap, cap nhat ho so, doi mat khau, cai dat giao dien.
+- Quan ly nhiem vu: them, sua, xoa, doi trang thai, thong ke va theo doi qua han.
+- Quan ly ke hoach: them, sua, xoa, hien thi theo ngay/tuan/thang, kiem tra trung lich theo quy tac da cau hinh.
+- Quan ly thoi quen: tao thoi quen, check-in hang ngay, theo doi chuoi thuc hien.
+- Thong bao trong he thong va danh dau da doc.
+- Tich hop Telegram de lien ket tai khoan va nhan thong bao/nhac viec.
+- Tro ly AI (Groq API) de ho tro hoi dap va thao tac nhanh tren du lieu.
+- Trang quan tri voi thong ke, quan ly nguoi dung, xem log va cau hinh AI prompt.
+
+1.1.3.2 Pham vi khong bao gom
+Du an chua bao gom cac noi dung sau:
+- Chua co ung dung mobile native (Android/iOS) rieng.
+- Chua tich hop thanh toan online va goi dich vu thuong mai day du.
+- Chua co quy trinh test tu dong bang bo test unit/integration hoan chinh.
+- Chua trien khai he thong phan tich su kien nang cao theo thoi gian thuc (real-time analytics pipeline).
+- Chua huong toi bai toan quy mo rat lon (kieu enterprise hang trieu nguoi dung).
+
+1.1.4 Doi tuong su dung
+He thong huong den 3 nhom doi tuong:
+- Nguoi dung ca nhan: sinh vien, nguoi di lam, freelancer can sap xep lich hoc, lich lam, va viec ca nhan.
+- Nguoi dung can duoc nhac viec thuong xuyen: co the dung Telegram de nhan thong bao ma khong can mo website lien tuc.
+- Quan tri vien he thong: theo doi du lieu tong quan, quan ly nguoi dung, cau hinh prompt AI va xem log loi.
+
+1.2 Cong nghe su dung
+
+1.2.1 Cong nghe Backend
+Backend duoc xay dung bang Node.js va Express. He thong API theo kieu REST, tach route theo tung nhom chuc nang (auth, tasks, plans, habits, dashboard, notifications, ai, admin).
+
+Nhung thanh phan ky thuat chinh:
+- Express: xu ly API va middleware.
+- mysql2/promise: ket noi CSDL MySQL-compatible (TiDB), co connection pool.
+- jsonwebtoken (JWT): xac thuc nguoi dung qua token.
+- bcryptjs: bam mat khau truoc khi luu CSDL.
+- cors, cookie-parser, body-parser: xu ly bao mat truy cap frontend-backend va du lieu request.
+- node-cron: chay tien trinh nhac viec dinh ky moi phut.
+- node-telegram-bot-api: tich hop bot Telegram de nhan/gui tin nhan.
+
+1.2.2 Cong nghe Frontend
+Frontend duoc xay dung theo mo hinh SPA bang JavaScript (ES Modules) va Vite. He thong khong phu thuoc framework nang, giup build nhanh va de deploy.
+
+Cac diem chinh:
+- Vite: phuc vu moi truong dev va build production.
+- Fetch API: goi backend API thong qua mot lop utility dung chung.
+- Hash Routing: dieu huong trang theo dang #/dashboard, #/planning, ...
+- CSS Design System: dung bien mau, bien khoang cach, che do light/dark de giao dien dong nhat.
+- Thanh phan giao dien tach roi: Sidebar, Topbar, ChatWidget, cac page theo module.
+
+1.3 Co so du lieu
+
+1.3.1 He quan tri co so du lieu
+He thong su dung TiDB Cloud (tuong thich MySQL) de luu tru du lieu. Ly do lua chon la de trien khai cloud de dang, ket noi tu backend Node.js thuong dung, va phu hop de tai hoc thuat can he thong online that.
+
+Trong backend, ket noi CSDL duoc to chuc bang connection pool. Du lieu ngay gio duoc xu ly can than de tranh sai lech mui gio giua moi truong local va production.
+
+1.3.2 Cac thuc the quan he
+Tu schema va migration trong he thong, cac bang du lieu chinh gom:
+- users: thong tin tai khoan, thong tin lien ket Telegram, vai tro, loai tai khoan.
+- user_settings: cai dat giao dien va thong bao theo tung nguoi dung.
+- tasks: quan ly nhiem vu, uu tien, han chot, trang thai.
+- plans: quan ly ke hoach theo khoang thoi gian, mau sac, uu tien, trang thai.
+- habits: quan ly thoi quen va chuoi check-in.
+- notifications: thong bao trong he thong.
+- system_config: cau hinh he thong (noi bat la prompt AI).
+- chat_logs: luu lich su hoi dap AI.
+- error_logs: luu log loi phat sinh de theo doi van hanh.
+
+Moi quan he chinh la users la bang trung tam, cac bang tasks/plans/habits/notifications/user_settings lien ket theo user_id.
+
+1.4 Cong cu ho tro
+De tai su dung nhieu cong cu ho tro trong qua trinh phat trien va van hanh:
+- VS Code: viet code va debug.
+- Git + GitHub: quan ly phien ban va dong bo ma nguon.
+- Render: deploy backend Node.js.
+- Vercel: deploy frontend Vite.
+- TiDB Cloud Console (hoac MySQL client): tao schema va quan ly du lieu.
+- Telegram BotFather: tao bot token de tich hop thong bao/chat.
+- Trinh duyet va DevTools: kiem tra API, giao dien va loi runtime.
+
+
+CHUONG 2: PHAN TICH YEU CAU
+
+2.1 Phan tich yeu cau he thong
+
+2.1.1 Yeu cau chuc nang
+Can cu tren ma nguon he thong, cac yeu cau chuc nang da duoc hien thuc gom:
+
+A. Nhom tai khoan va xac thuc
+- Dang ky tai khoan moi bang username, email, password.
+- Dang nhap bang username hoac email.
+- Lay thong tin ho so, cap nhat ho so, doi mat khau.
+- Cap nhat cai dat giao dien (theme, mau nhan dien, thong bao).
+- Dang xuat va kiem tra phien dang nhap bang JWT.
+
+B. Nhom quan ly nghiep vu ca nhan
+- Quan ly nhiem vu: them, sua, xoa, xem danh sach, thong ke.
+- Quan ly ke hoach: them, sua, xoa, xem theo ngay/tuan/thang.
+- Kiem tra trung lich theo quy tac da cau hinh de giam xung dot.
+- Quan ly thoi quen: them, xoa, check-in va tinh streak.
+
+C. Nhom dashboard va thong bao
+- Trang tong quan hien thi thong ke tong hop task/plan.
+- Hien thi lich trong ngay, thoi quen, du lieu nang suat theo tuan.
+- Thong bao trong he thong (doc, danh dau da doc, xoa).
+- Nhac viec tu dong qua cron (task qua han, plan sap bat dau).
+
+D. Nhom AI va Telegram
+- Nguoi dung chat voi Bee AI trong website.
+- AI co the tra loi va ho tro thao tac nhanh (tao plan, tao task, ...).
+- Lien ket tai khoan Telegram bang ma token BEE-xxxxx.
+- Gui thong bao va nhac viec qua Telegram.
+
+E. Nhom quan tri
+- Xem thong ke he thong va xu huong nguoi dung.
+- Quan ly danh sach nguoi dung.
+- Cau hinh prompt cho AI.
+- Xem chat log, error log, va gui thong bao broadcast.
+
+2.1.2 Yeu cau phi chuc nang
+Ngoai chuc nang nghiep vu, he thong dat cac yeu cau phi chuc nang sau:
+- Bao mat: mat khau bam bang bcrypt, API bao ve bang JWT, middleware phan quyen admin.
+- Dinh dang phan hoi API ro rang: phan hoi JSON cho route loi, thong diep de hieu.
+- Kha nang trien khai cloud: frontend va backend tach rieng, ket noi qua bien moi truong.
+- Kha nang van hanh lien tuc: co co che keep-alive va cron reminder.
+- Kha nang su dung: giao dien responsive, co dark/light mode, trinh bay than thien.
+- Kha nang mo rong: code to chuc theo route-controller-service, de bo sung module moi.
+
+2.2 Muc tieu du an
+
+2.2.1 Muc tieu tong quat
+Xay dung mot he thong quan ly nang suat ca nhan co the su dung trong thuc te, hoat dong on dinh tren cloud, va tao duoc gia tri su dung ro rang cho nguoi dung thong qua viec ket hop quan ly cong viec va tro ly AI.
+
+2.2.2 Muc tieu cu the
+- Hoan thien mot backend API co day du module nghiep vu cot loi.
+- Hoan thien mot frontend web de thao tac nhanh, de dung.
+- Hoan thien ket noi CSDL va migration de cap nhat schema theo tung giai doan.
+- Hoan thien tich hop Telegram va AI de tang trai nghiem su dung.
+- Co trang quan tri de theo doi tinh trang he thong.
+
+2.3 Dac ta Usecase
+
+2.3.1 So do Usecase tong quat
+Neu mo ta o muc tong quat, he thong co 3 tac nhan chinh:
+- Khach (chua dang nhap): dang ky, dang nhap.
+- Nguoi dung da dang nhap: quan ly task/plan/habit, xem dashboard, nhan thong bao, chat voi AI, lien ket Telegram, cap nhat cai dat.
+- Quan tri vien: thuc hien toan bo usecase cua nguoi dung va bo sung them quan ly user, xem log, cau hinh AI, thong bao he thong.
+
+Ngoai ra, Telegram dong vai tro kenh tuong tac bo tro: nhan thong bao va gui noi dung chat toi he thong AI.
+
+2.3.2 Mo ta chi tiet Usecase
+Usecase 1 - Dang ky/Dang nhap:
+Nguoi dung nhap thong tin tai khoan, he thong kiem tra du lieu hop le, neu thanh cong tao token dang nhap va tra ve thong tin can thiet.
+
+Usecase 2 - Quan ly nhiem vu:
+Nguoi dung tao nhiem vu moi, cap nhat trang thai theo tien do, xoa khi khong can. He thong cap nhat thong ke va co the gui nhac viec.
+
+Usecase 3 - Quan ly ke hoach:
+Nguoi dung tao lich theo khung gio, he thong kiem tra xung dot theo quy tac. Lich duoc hien thi theo ngay/tuan/thang, co mau sac de phan biet.
+
+Usecase 4 - Quan ly thoi quen:
+Nguoi dung tao thoi quen va check-in moi ngay. He thong tang streak khi check-in dung ngay.
+
+Usecase 5 - Nhan thong bao va nhac viec:
+He thong tao thong bao in-app khi co su kien (tao/hoan thanh cong viec), dong thoi nhac viec qua Telegram neu tai khoan da lien ket.
+
+Usecase 6 - Chat voi Bee AI:
+Nguoi dung nhap yeu cau bang ngon ngu tu nhien. AI tra loi va co the ho tro thao tac nhanh tren du lieu (tao lich, cap nhat thong tin lien quan).
+
+Usecase 7 - Quan tri he thong:
+Admin theo doi so lieu tong hop, quan ly user, xem log he thong, cau hinh prompt AI, gui thong bao den nguoi dung.
+
+2.4 Thiet ke co so du lieu
+Co so du lieu duoc thiet ke theo huong don gian, de hieu, tap trung vao users la trung tam.
+
+Nguyen tac thiet ke:
+- Du lieu tai khoan tach rieng voi du lieu cai dat (users, user_settings).
+- Du lieu nghiep vu tach theo module ro rang (tasks, plans, habits).
+- Du lieu giam sat va cau hinh he thong tach rieng (chat_logs, error_logs, system_config).
+- Khoa ngoai user_id giup lien ket du lieu theo tung nguoi dung va de xoa cascade khi can.
+
+Thiet ke nay phu hop cho san pham quy mo nho den trung binh, de bao tri, va de nang cap them bang/chuc nang sau nay.
+
+2.5 Thiet ke kien truc he thong
+
+2.5.1 Kien truc tong the
+He thong su dung kien truc 3 lop:
+- Lop giao dien (Frontend SPA): xu ly tuong tac nguoi dung, hien thi du lieu, goi API.
+- Lop nghiep vu (Backend API): xac thuc, xu ly logic task/plan/habit/ai/admin.
+- Lop luu tru (Database): luu du lieu nghiep vu va log he thong.
+
+Ngoai 3 lop chinh, he thong ket noi 2 dich vu ben ngoai:
+- Groq API cho tro ly AI.
+- Telegram Bot API cho kenh nhac viec va tuong tac chat.
+
+2.5.2 Mo hinh trien khai
+Mo hinh trien khai hien tai:
+- Frontend deploy tren Vercel.
+- Backend deploy tren Render.
+- Database deploy tren TiDB Cloud.
+
+Frontend giao tiep backend qua URL API tu bien moi truong. Backend ket noi CSDL qua bo bien DB_HOST, DB_USER, DB_PASS, DB_NAME, DB_PORT, DB_SSL.
+
+2.5.3 Luong du lieu chinh
+Luong 1 - Dang nhap:
+Nguoi dung gui thong tin dang nhap tu frontend -> backend xac thuc voi CSDL -> backend tra JWT + thong tin user -> frontend luu token de goi cac API yeu cau dang nhap.
+
+Luong 2 - Tao ke hoach va nhac viec:
+Nguoi dung tao plan -> backend luu CSDL + tao notification -> reminder service quet dinh ky -> den sat gio thi gui nhac qua Telegram neu da lien ket.
+
+Luong 3 - Chat AI:
+Nguoi dung gui cau hoi -> backend nap context task/plan/habit -> goi Groq API -> nhan ket qua -> tra ve frontend va luu chat log.
+
+2.6 Phat trien Backend
+
+2.6.1 Noi dung thuc hien
+Phan backend da thuc hien cac noi dung lon sau:
+- Xay dung bo API theo module route-controller.
+- Xay dung middleware xac thuc va middleware admin.
+- Tich hop CSDL va migration bo sung schema theo tung chuc nang.
+- Xay dung reminder service theo lich cron.
+- Tich hop Telegram bot cho nhac viec va lien ket tai khoan.
+- Tich hop AI chat va bo xu ly luan phien API key.
+- Xay dung bo API quan tri va log he thong.
+
+2.6.3 Ket qua dat duoc
+Ket qua backend dat duoc:
+- API nghiep vu chinh hoat dong day du cho user va admin.
+- CSDL duoc bo sung day du bang nghiep vu va bang he thong.
+- He thong da trien khai duoc tren cloud, co su dung env de cau hinh.
+- Da co co che giam sat co ban qua log va thong ke admin.
+- Da tich hop kenh thong bao ngoai he thong (Telegram).
+
+2.7 Phat trien Frontend
+
+2.7.1 Noi dung thuc hien
+Phan frontend da thuc hien:
+- Xay dung SPA voi router theo hash.
+- Xay dung bo trang chinh: dashboard, tasks, planning, habits, settings.
+- Xay dung giao dien admin va dieu huong theo vai tro.
+- Xay dung API utility dung chung, xu ly token va loi API.
+- Xay dung ChatWidget de tuong tac voi Bee AI.
+- Xay dung design system (mau sac, spacing, theme) va responsive cho man hinh pho bien.
+
+2.7.3 Ket qua dat duoc
+Ket qua frontend dat duoc:
+- Giao dien day du cho luong su dung thuc te tu dang nhap den quan ly cong viec.
+- Trai nghiem su dung nhat quan nho design system va trang thai dark/light.
+- Cac trang co tinh lien ket tot voi backend API.
+- Co kha nang deploy production tren Vercel va ket noi backend cloud.
+
+2.8 Kiem thu va tich hop toan he thong
+He thong da duoc tich hop giua frontend, backend, CSDL, AI API va Telegram. Qua qua trinh van hanh va sua loi, cac luong trong tam da duoc kiem thu thuc te:
+- Dang ky/dang nhap va duyet phan quyen.
+- Tao, cap nhat, xoa task-plan-habit.
+- Hien thi dashboard va planning theo nhieu che do xem.
+- Gui nhac viec va thong bao qua Telegram.
+- Chat voi AI va nhan phan hoi theo context du lieu nguoi dung.
+
+Trang thai hien tai cua de tai la mot he thong da hoat dong duoc tren moi truong production. Tuy chua co bo test tu dong hoan chinh, nhung thong qua kiem thu thu cong va tich hop thuc te tren cloud, he thong da dat muc do on dinh tot cho muc tieu de tai.
+
+---
+Ghi chu su dung cho bao cao Word:
+- Co the giu nguyen bo cuc tieu muc nhu tren.
+- Neu can them hinh anh, nen chen vao cac muc: 2.3.1 (Usecase), 2.5.1 (Kien truc tong the), 2.5.2 (Mo hinh trien khai), 2.4 (ERD).
+- Noi dung tren duoc viet theo he thong hien co trong ma nguon PlanBee de dam bao tinh dong nhat giua bao cao va san pham.

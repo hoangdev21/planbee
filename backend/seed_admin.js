@@ -2,9 +2,9 @@ const db = require('./config/db');
 const bcrypt = require('bcryptjs');
 
 async function seedAdmin() {
-    const username = 'hoangdev11';
-    const email = 'hoangdev11@gmail.com';
-    const password = 'hoangdev11';
+    const username = 'hoangdev21';
+    const email = 'hoangdev21@gmail.com';
+    const password = 'hoangdev21';
     const role = 'admin';
     const accountType = 'premium';
 
