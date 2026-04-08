@@ -41,6 +41,9 @@ Vào tab **"Environment"** của Web Service trên Render và thêm các biến 
 > [!TIP]
 > Biến `BACKEND_URL` rất quan trọng vì nó được sử dụng bởi script `keepAlive.js` (trong `backend/utils`) để tự động "ping" server của bạn mỗi 5 phút, giữ cho server không bị ngủ (sleep) ở gói Free.
 
+> [!TIP]
+> Không cần đặt biến `HOST` trên Render. Để trống để server tự bind theo interface runtime.
+
 > [!NOTE]
 > Từ phiên bản hiện tại, self-ping chỉ chạy khi `ENABLE_SELF_PING=true` và không chạy trên Render runtime. Với Render, nên để `ENABLE_SELF_PING=false`.
 
