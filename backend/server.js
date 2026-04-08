@@ -72,18 +72,21 @@ const UNIQUE_ALLOWED_ORIGINS = [...new Set(ALLOWED_ORIGINS)];
 
 app.use(cors({
     origin: (origin, callback) => {
-        const normalizedOrigin = origin ? origin.replace(/\/+$/, '') : origin;
-
-        if (!normalizedOrigin || UNIQUE_ALLOWED_ORIGINS.includes(normalizedOrigin)) {
+        // Allow requests with no origin (like mobile apps or curl)
+        if (!origin) return callback(null, true);
+        
+        const normalizedOrigin = origin.replace(/\/+$/, '');
+        if (UNIQUE_ALLOWED_ORIGINS.includes(normalizedOrigin)) {
             callback(null, true);
         } else {
-            console.warn(`CORS blocked request from: ${normalizedOrigin}`);
-            callback(new Error('CORS not allowed'));
+            console.warn(`[CORS] Rejected: ${origin}`);
+            // Instead of error, we can return false to let the browser handle it via its policy
+            callback(null, false);
         }
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 app.use(bodyParser.json());
 app.use(cookieParser());
