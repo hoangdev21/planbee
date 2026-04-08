@@ -5,9 +5,13 @@ import { initChatWidget } from './src/components/ChatWidget.js';
 /* 🛡️ PRO-LEVEL SECURITY: ANTI-DEVTOOLS SYSTEM */
 /* 🛡️ PRO-LEVEL SECURITY: ANTI-DEVTOOLS SYSTEM */
 const initSecurity = () => {
-    // Only lock down on production (e.g. Vercel, Render)
+    // Allow bypassing security if ?debug=true is in URL or planbee_debug is set in localStorage
+    const urlParams = new URLSearchParams(window.location.hash.split('?')[1]);
+    const isDebugMode = urlParams.get('debug') === 'true' || localStorage.getItem('planbee_debug') === 'true';
+
+    // Only lock down on production and if NOT in debug mode
     const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    if (isLocal) return; // Do not block development locally
+    if (isLocal || isDebugMode) return; 
 
     // Skip on mobile devices to prevent false positives (Safari iPhone, etc.)
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -73,7 +77,7 @@ const initSecurity = () => {
         console.clear(); 
     }, 1000);
 };
-initSecurity();
+// initSecurity();
 
 // State management (simple)
 const state = {
