@@ -32,10 +32,14 @@ Vào tab **"Environment"** của Web Service trên Render và thêm các biến 
 | `JWT_SECRET` | `<Một chuỗi ký tự bí mật tùy ý>` |
 | `FRONTEND_URL` | `<Link Vercel của bạn sau khi deploy>` |
 | `TELEGRAM_BOT_TOKEN` | `<Token từ BotFather>` |
+| `TELEGRAM_POLLING_ENABLED` | `false` (khuyên dùng trên Render để tránh lỗi 409 khi có nhiều instance) |
 | `BACKEND_URL` | `https://<tên-web-service-của-bạn>.onrender.com` |
 
 > [!TIP]
 > Biến `BACKEND_URL` rất quan trọng vì nó được sử dụng bởi script `keepAlive.js` (trong `backend/utils`) để tự động "ping" server của bạn mỗi 5 phút, giữ cho server không bị ngủ (sleep) ở gói Free.
+
+> [!WARNING]
+> Nếu log hiển thị `ETELEGRAM: 409 Conflict: terminated by other getUpdates request`, nghĩa là có hơn một tiến trình bot đang polling cùng một token. Hãy để `TELEGRAM_POLLING_ENABLED=false` trên Render (send-only mode) hoặc chỉ bật `true` ở đúng một instance duy nhất.
 
 ## 4. Theo dõi Log
 Sau khi nhấn **"Create Web Service"**, hãy theo dõi tab **"Events"** và **"Logs"**. Nếu thấy dòng `Server is running on port 10000` và `[Keep-Alive] Starting pinger...` là deploy thành công.

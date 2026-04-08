@@ -4,12 +4,47 @@ const aiController = require('../controllers/aiController');
 require('dotenv').config();
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
+const parseBooleanEnv = (value, fallback = false) => {
+    if (value === undefined || value === null || String(value).trim() === '') {
+        return fallback;
+    }
+
+    const normalized = String(value).trim().toLowerCase();
+    return ['1', 'true', 'yes', 'on'].includes(normalized);
+};
+
+// Default: polling ON for local dev, OFF in production to avoid duplicate getUpdates conflicts.
+const TELEGRAM_POLLING_ENABLED = parseBooleanEnv(
+    process.env.TELEGRAM_POLLING_ENABLED,
+    process.env.NODE_ENV !== 'production'
+);
 
 if (!token) {
     console.warn('TELEGRAM_BOT_TOKEN is not set in .env. Telegram Bot is disabled.');
     module.exports = { bot: null, sendSimpleMessage: null };
 } else {
-    const bot = new TelegramBot(token, { polling: true });
+    const bot = new TelegramBot(token, { polling: false });
+    let pollingStoppedByConflict = false;
+
+    bot.on('polling_error', async (error) => {
+        const statusCode = error && error.response ? error.response.statusCode : undefined;
+        const message = error && error.message ? error.message : String(error);
+
+        if (statusCode === 409 || /409\s*Conflict/i.test(message)) {
+            if (!pollingStoppedByConflict) {
+                pollingStoppedByConflict = true;
+                console.warn('[Telegram] Polling conflict (409): another bot instance is already polling. Stopping polling on this instance.');
+                try {
+                    await bot.stopPolling();
+                } catch (stopError) {
+                    console.warn('[Telegram] stopPolling warning:', stopError.message);
+                }
+            }
+            return;
+        }
+
+        console.error('[Telegram] Polling error:', message);
+    });
 
     const FE_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
@@ -200,6 +235,36 @@ if (!token) {
     const { setBot } = require('./telegramBotStore');
     setBot(bot);
 
-    console.log('Telegram Bot is running...');
+    if (TELEGRAM_POLLING_ENABLED) {
+        (async () => {
+            try {
+                await bot.deleteWebHook({ drop_pending_updates: false });
+            } catch (webhookError) {
+                console.warn('[Telegram] deleteWebHook warning:', webhookError.message);
+            }
+
+            try {
+                await bot.startPolling({ restart: false });
+                console.log('Telegram Bot is running (polling mode)...');
+            } catch (startError) {
+                console.error('[Telegram] Failed to start polling:', startError.message);
+            }
+        })();
+    } else {
+        console.log('Telegram Bot initialized in send-only mode (polling disabled). Set TELEGRAM_POLLING_ENABLED=true if you need command handling.');
+    }
+
+    ['SIGINT', 'SIGTERM'].forEach((signal) => {
+        process.once(signal, async () => {
+            if (!TELEGRAM_POLLING_ENABLED) return;
+            try {
+                await bot.stopPolling();
+                console.log(`[Telegram] Polling stopped on ${signal}.`);
+            } catch (stopError) {
+                console.warn('[Telegram] stopPolling warning:', stopError.message);
+            }
+        });
+    });
+
     module.exports = bot;
 }
