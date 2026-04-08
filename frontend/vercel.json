@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://planbee-ocvi.onrender.com/api/:path*"
+    }
+  ]
+}

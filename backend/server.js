@@ -6,7 +6,7 @@ require('dotenv').config();
 const keepAlive = require('./utils/keepAlive');
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = Number(process.env.PORT) || 5000;
 const HOST = process.env.HOST || '0.0.0.0';
 
 const parseBooleanEnv = (value, fallback = false) => {
@@ -19,6 +19,8 @@ const parseBooleanEnv = (value, fallback = false) => {
 
 const START_TELEGRAM_BOT = parseBooleanEnv(process.env.START_TELEGRAM_BOT, false);
 const START_REMINDER_SERVICE = parseBooleanEnv(process.env.START_REMINDER_SERVICE, false);
+const ENABLE_SELF_PING = parseBooleanEnv(process.env.ENABLE_SELF_PING, false);
+const IS_RENDER_RUNTIME = parseBooleanEnv(process.env.RENDER, false) || Boolean(process.env.RENDER_SERVICE_ID);
 
 if (START_TELEGRAM_BOT) {
     try {
@@ -108,14 +110,17 @@ app.get('/', (req, res) => {
     res.json({ message: 'Welcome to PlanBee API' });
 });
 
-app.get('/health', (req, res) => {
+const healthHandler = (req, res) => {
     res.status(200).json({
         status: 'ok',
         service: 'planbee-backend',
         uptimeSeconds: Math.floor(process.uptime()),
         timestamp: new Date().toISOString()
     });
-});
+};
+
+app.get('/health', healthHandler);
+app.get('/api/health', healthHandler);
 
 const authRoutes = require('./routes/authRoutes');
 const taskRoutes = require('./routes/taskRoutes');
@@ -160,9 +165,14 @@ app.use((err, req, res, next) => {
 app.listen(PORT, HOST, () => {
     console.log(`Server is running on ${HOST}:${PORT}`);
     
-    // Self-ping to keeps the Render Free-Tier instance alive
-    if (process.env.NODE_ENV === 'production') {
+    // Keep-alive pinger should be opt-in and disabled on Render to avoid self-loop calls via edge network.
+    if (process.env.NODE_ENV === 'production' && ENABLE_SELF_PING && !IS_RENDER_RUNTIME) {
         const BACKEND_URL = process.env.BACKEND_URL;
         keepAlive(BACKEND_URL);
+    } else if (process.env.NODE_ENV === 'production') {
+        const reason = !ENABLE_SELF_PING
+            ? 'ENABLE_SELF_PING=false'
+            : 'Render runtime detected';
+        console.log(`[Keep-Alive] Disabled (${reason})`);
     }
 });

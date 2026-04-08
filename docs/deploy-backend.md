@@ -35,10 +35,14 @@ Vào tab **"Environment"** của Web Service trên Render và thêm các biến 
 | `TELEGRAM_POLLING_ENABLED` | `false` (khuyên dùng trên Render để tránh lỗi 409 khi có nhiều instance) |
 | `START_TELEGRAM_BOT` | `false` nếu đang ưu tiên ổn định API login/register; `true` khi cần bot đầy đủ |
 | `START_REMINDER_SERVICE` | `false` nếu cần cô lập lỗi background job; `true` khi muốn bật nhắc lịch |
+| `ENABLE_SELF_PING` | `false` (khuyến nghị trên Render để tránh self-loop ping qua edge) |
 | `BACKEND_URL` | `https://<tên-web-service-của-bạn>.onrender.com` |
 
 > [!TIP]
 > Biến `BACKEND_URL` rất quan trọng vì nó được sử dụng bởi script `keepAlive.js` (trong `backend/utils`) để tự động "ping" server của bạn mỗi 5 phút, giữ cho server không bị ngủ (sleep) ở gói Free.
+
+> [!NOTE]
+> Từ phiên bản hiện tại, self-ping chỉ chạy khi `ENABLE_SELF_PING=true` và không chạy trên Render runtime. Với Render, nên để `ENABLE_SELF_PING=false`.
 
 > [!WARNING]
 > Nếu log hiển thị `ETELEGRAM: 409 Conflict: terminated by other getUpdates request`, nghĩa là có hơn một tiến trình bot đang polling cùng một token. Hãy để `TELEGRAM_POLLING_ENABLED=false` trên Render (send-only mode) hoặc chỉ bật `true` ở đúng một instance duy nhất.

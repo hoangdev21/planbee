@@ -1,33 +1,34 @@
 const PROD_BACKEND_FALLBACK = 'https://planbee-ocvi.onrender.com';
+const LOCAL_BACKEND_FALLBACK = 'http://localhost:5000';
 
-const normalizeApiBaseUrl = () => {
-    const configuredBase = import.meta.env.VITE_API_BASE_URL;
-    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    const fallbackBase = isLocal ? 'http://localhost:5000' : PROD_BACKEND_FALLBACK;
+const isLocalHost = () =>
+    window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
-    let baseUrl = (configuredBase || fallbackBase).trim().replace(/\/+$/, '');
+const normalizeBaseUrl = (value = '') => String(value).trim().replace(/\/+$/, '');
 
-    // Auto-fix a common deployment mistake: API base points to frontend domain.
-    try {
-        const parsed = new URL(baseUrl);
-        if (!isLocal && parsed.hostname === window.location.hostname) {
-            baseUrl = PROD_BACKEND_FALLBACK;
-        }
-    } catch {
-        baseUrl = fallbackBase;
+const toApiBaseUrl = (baseUrl) =>
+    baseUrl.endsWith('/api') ? baseUrl : `${baseUrl}/api`;
+
+const buildApiBaseCandidates = () => {
+    const configuredBase = normalizeBaseUrl(import.meta.env.VITE_API_BASE_URL || '');
+    const local = isLocalHost();
+    const candidates = [];
+
+    if (!local) {
+        // Same-origin first to avoid browser-side CORS when frontend hosting supports /api rewrites.
+        candidates.push(normalizeBaseUrl(window.location.origin));
     }
 
-    // Prevent duplicated /api when env var already includes /api.
-    if (!baseUrl.endsWith('/api')) {
-        baseUrl = `${baseUrl}/api`;
+    if (configuredBase) {
+        candidates.push(configuredBase);
     }
 
-    return baseUrl;
+    candidates.push(local ? LOCAL_BACKEND_FALLBACK : PROD_BACKEND_FALLBACK);
+
+    return [...new Set(candidates.filter(Boolean).map(toApiBaseUrl))];
 };
 
-const API_BASE_URL = normalizeApiBaseUrl();
-const PROD_API_BASE_URL = `${PROD_BACKEND_FALLBACK.replace(/\/+$/, '')}/api`;
-const API_BASE_URL_CANDIDATES = [...new Set([API_BASE_URL, PROD_API_BASE_URL])];
+const API_BASE_URL_CANDIDATES = buildApiBaseCandidates();
 
 const api = {
     showBeeAlert(message) {
@@ -63,6 +64,7 @@ const api = {
         const token = localStorage.getItem('token');
         
         const defaultOptions = {
+            credentials: 'include',
             headers: {
                 'Content-Type': 'application/json',
                 ...(token && { 'Authorization': `Bearer ${token}` })
@@ -86,8 +88,13 @@ const api = {
                         data = JSON.parse(rawText);
                     } catch {
                         const isHtmlResponse = rawText.trim().startsWith('<');
+                        if (isHtmlResponse && !isLastCandidate) {
+                            console.warn(`API candidate ${baseUrl} returned HTML, trying fallback...`);
+                            continue;
+                        }
+
                         if (isHtmlResponse) {
-                            throw new Error(`API trả về HTML thay vì JSON. Hãy kiểm tra VITE_API_BASE_URL (${baseUrl}).`);
+                            throw new Error(`API trả về HTML thay vì JSON. Hãy kiểm tra endpoint API (${baseUrl}).`);
                         }
 
                         throw new Error(`Server trả về dữ liệu không hợp lệ (HTTP ${response.status}).`);
@@ -107,7 +114,13 @@ const api = {
                         this.showBeeAlert(data.message);
                     }
 
-                    throw new Error(data.message || 'Something went wrong');
+                    const retryableStatus = [502, 503, 504, 521, 522, 523, 524];
+                    if (retryableStatus.includes(response.status) && !isLastCandidate) {
+                        console.warn(`API failed with ${response.status} at ${baseUrl}, trying fallback...`);
+                        continue;
+                    }
+
+                    throw new Error(data.message || `Yêu cầu thất bại (HTTP ${response.status}).`);
                 }
 
                 return data;

@@ -17,6 +17,20 @@ Khi thiết lập Project, hãy điền các thông tin quan trọng sau:
 - **Output Directory**: `dist`
 - **Install Command**: `npm install`
 
+### Cấu hình Rewrite API (khuyến nghị)
+Tạo file `frontend/vercel.json` để route API cùng domain và tránh lỗi CORS phía trình duyệt:
+
+```json
+{
+	"rewrites": [
+		{
+			"source": "/api/:path*",
+			"destination": "https://<tên-backend-trên-render>.onrender.com/api/:path*"
+		}
+	]
+}
+```
+
 ## 3. Biến môi trường (Environment Variables)
 Trong phần **"Environment Variables"** của trình tạo project, hãy thêm biến môi trường sau:
 
@@ -26,6 +40,9 @@ Trong phần **"Environment Variables"** của trình tạo project, hãy thêm 
 
 > [!IMPORTANT]
 > Biến `VITE_API_BASE_URL` cho phép Frontend Vite của bạn biết được Backend API nằm ở đâu trong môi trường Production. Hãy chắc chắn URL này **KHÔNG** kết thúc bằng dấu `/` (ví dụ: `https://planbee.onrender.com`).
+
+> [!TIP]
+> Frontend hiện tại sẽ ưu tiên gọi `https://<domain-frontend>/api/...` trước, sau đó mới fallback sang `VITE_API_BASE_URL`.
 
 ## 4. Kiểm tra
 Sau khi nhấn **"Deploy"**, Vercel sẽ tự động build và cấp cho bạn một tên miền (domain) kết thúc bằng `.vercel.app`.
