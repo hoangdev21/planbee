@@ -1,4 +1,4 @@
-const PROD_BACKEND_FALLBACK = 'https://planbee-i8ua.onrender.com';
+const PROD_BACKEND_FALLBACK = 'https://planbee-ocvi.onrender.com';
 
 const normalizeApiBaseUrl = () => {
     const configuredBase = import.meta.env.VITE_API_BASE_URL;
