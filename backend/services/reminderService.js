@@ -3,7 +3,24 @@ const db = require('../config/db');
 const { sendSimpleMessage } = require('./telegramSender');
 const { formatDateForMySQL } = require('../utils/dateFormatter');
 
+const REQUIRED_REMINDER_TABLES = ['plans', 'tasks'];
+
+const getMissingReminderColumns = async () => {
+    const [rows] = await db.execute(
+        `SELECT TABLE_NAME AS tableName
+         FROM information_schema.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE()
+           AND COLUMN_NAME = 'reminder_sent'
+           AND TABLE_NAME IN ('plans', 'tasks')`
+    );
+
+    const existingTables = new Set(rows.map((row) => row.tableName));
+    return REQUIRED_REMINDER_TABLES.filter((tableName) => !existingTables.has(tableName));
+};
+
 const reminderService = () => {
+    let lastMissingColumnsKey = '';
+
     // Run every minute
     cron.schedule('* * * * *', async () => {
         const now = new Date();
@@ -13,6 +30,25 @@ const reminderService = () => {
         const in5MinutesStr = formatDateForMySQL(in5Minutes); 
 
         try {
+            const missingTables = await getMissingReminderColumns();
+            if (missingTables.length > 0) {
+                const missingKey = [...missingTables].sort().join(',');
+
+                if (missingKey !== lastMissingColumnsKey) {
+                    console.warn(
+                        `[Reminder Service] Missing reminder_sent column in table(s): ${missingTables.join(', ')}. Run "npm run migrate:reminders" in backend to add required columns.`
+                    );
+                }
+
+                lastMissingColumnsKey = missingKey;
+                return;
+            }
+
+            if (lastMissingColumnsKey) {
+                console.log('[Reminder Service] reminder_sent columns detected. Reminder polling resumed.');
+                lastMissingColumnsKey = '';
+            }
+
             // 1. Check for PLANS (Strictly 5 minutes before start)
             // Selecting plans that start within the next 5-6 minutes window
             const [plans] = await db.execute(

@@ -9,6 +9,10 @@ const initSecurity = () => {
     const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     if (isLocal) return; // Do not block development locally
 
+    // Skip on mobile devices to prevent false positives (Safari iPhone, etc.)
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    if (isMobile) return;
+
     // 1. Block Keyboard Shortcuts & Source View
     document.addEventListener('keydown', (e) => {
         if (

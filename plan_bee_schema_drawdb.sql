@@ -42,6 +42,7 @@ CREATE TABLE `plans` (
   `priority` ENUM('low', 'medium', 'high') DEFAULT 'medium',
   `status` VARCHAR(20) DEFAULT 'pending', -- pending, doing, completed, cancelled
   `color` VARCHAR(20) DEFAULT '#FFA726',
+  `reminder_sent` TINYINT(1) DEFAULT 0,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
@@ -57,6 +58,7 @@ CREATE TABLE `tasks` (
   `status` ENUM('pending', 'doing', 'completed') DEFAULT 'pending',
   `priority` ENUM('low', 'medium', 'high') DEFAULT 'medium',
   `due_date` DATETIME DEFAULT NULL,
+  `reminder_sent` TINYINT(1) DEFAULT 0,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
