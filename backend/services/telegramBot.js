@@ -13,10 +13,10 @@ const parseBooleanEnv = (value, fallback = false) => {
     return ['1', 'true', 'yes', 'on'].includes(normalized);
 };
 
-// Default: polling ON for local dev, OFF in production to avoid duplicate getUpdates conflicts.
+// Default: polling OFF to avoid duplicate getUpdates conflicts on hosted environments.
 const TELEGRAM_POLLING_ENABLED = parseBooleanEnv(
     process.env.TELEGRAM_POLLING_ENABLED,
-    process.env.NODE_ENV !== 'production'
+    false
 );
 
 if (!token) {

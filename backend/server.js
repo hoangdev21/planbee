@@ -8,9 +8,46 @@ const keepAlive = require('./utils/keepAlive');
 const app = express();
 const PORT = process.env.PORT || 5000;
 const HOST = process.env.HOST || '0.0.0.0';
-require('./services/telegramBot'); // Start the bot service
-const reminderService = require('./services/reminderService');
-reminderService(); // Start reminder service
+
+const parseBooleanEnv = (value, fallback = false) => {
+    if (value === undefined || value === null || String(value).trim() === '') {
+        return fallback;
+    }
+
+    return ['1', 'true', 'yes', 'on'].includes(String(value).trim().toLowerCase());
+};
+
+const START_TELEGRAM_BOT = parseBooleanEnv(process.env.START_TELEGRAM_BOT, false);
+const START_REMINDER_SERVICE = parseBooleanEnv(process.env.START_REMINDER_SERVICE, false);
+
+if (START_TELEGRAM_BOT) {
+    try {
+        require('./services/telegramBot');
+    } catch (error) {
+        console.error('[Bootstrap] Telegram bot failed to initialize:', error);
+    }
+} else {
+    console.log('[Bootstrap] Telegram bot disabled by START_TELEGRAM_BOT=false');
+}
+
+if (START_REMINDER_SERVICE) {
+    try {
+        const reminderService = require('./services/reminderService');
+        reminderService();
+    } catch (error) {
+        console.error('[Bootstrap] Reminder service failed to initialize:', error);
+    }
+} else {
+    console.log('[Bootstrap] Reminder service disabled by START_REMINDER_SERVICE=false');
+}
+
+process.on('unhandledRejection', (reason) => {
+    console.error('[Process] Unhandled Rejection:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+    console.error('[Process] Uncaught Exception:', error);
+});
 
 // Middleware
 const parseOriginList = (originValue = '') =>
