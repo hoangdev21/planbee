@@ -6,6 +6,32 @@ const NotificationController = require('./notificationController');
 
 const isValidDate = (value) => value instanceof Date && !Number.isNaN(value.getTime());
 
+const classifyOverlapCandidates = (rows = []) => {
+    const shortPlans = [];
+    const longPlans = [];
+
+    for (const row of rows) {
+        const startStr = formatDateForMySQL(row.start_time);
+        const endStr = formatDateForMySQL(row.end_time);
+        const startDate = wallClockToUtcDate(startStr);
+        const endDate = wallClockToUtcDate(endStr);
+
+        if (!isValidDate(startDate) || !isValidDate(endDate)) {
+            // If we can't classify reliably, be safe and treat as short overlap candidate.
+            shortPlans.push(row);
+            continue;
+        }
+
+        if (isShortPlanRange(startDate, endDate)) {
+            shortPlans.push(row);
+        } else {
+            longPlans.push(row);
+        }
+    }
+
+    return { shortPlans, longPlans };
+};
+
 const getUsedPlanColors = async (userId, excludePlanId = null) => {
     if (excludePlanId !== null) {
         const [rows] = await db.execute(
@@ -106,30 +132,28 @@ const planController = {
                 return res.status(400).json({ message: 'Thời gian kết thúc phải sau thời gian bắt đầu!' });
             }
 
-            let overlaps = [];
-            if (isShortPlanRange(startDate, endDate)) {
-                [overlaps] = await db.execute(
-                    'SELECT title FROM plans WHERE user_id = ? AND TIMESTAMPDIFF(SECOND, start_time, end_time) < 86400 AND start_time < ? AND end_time > ? LIMIT 1',
-                    [req.user.id, MySQLEnd, MySQLStart]
-                );
+            let overlappingRows = [];
+            [overlappingRows] = await db.execute(
+                'SELECT id, title, start_time, end_time FROM plans WHERE user_id = ? AND start_time < ? AND end_time > ? LIMIT 10',
+                [req.user.id, MySQLEnd, MySQLStart]
+            );
 
-                if (overlaps.length === 0) {
-                    const longPlans = await getLongPlansByRange(req.user.id, MySQLStart, MySQLEnd);
-                    const conflict = findLongPlanDailyConflict({
-                        candidateStart: MySQLStart,
-                        candidateEnd: MySQLEnd,
-                        longPlans
-                    });
-
-                    if (conflict) {
-                        overlaps = [{ title: conflict.title }];
-                    }
-                }
+            const { shortPlans, longPlans } = classifyOverlapCandidates(overlappingRows);
+            if (shortPlans.length > 0) {
+                return res.status(400).json({
+                    message: `Lịch bị trùng với kế hoạch: "${shortPlans[0].title}". Vui lòng chọn thời giờ khác! 🐝`
+                });
             }
 
-            if (overlaps.length > 0) {
+            const conflict = findLongPlanDailyConflict({
+                candidateStart: MySQLStart,
+                candidateEnd: MySQLEnd,
+                longPlans
+            });
+
+            if (conflict) {
                 return res.status(400).json({ 
-                    message: `Lịch bị trùng với kế hoạch: "${overlaps[0].title}". Vui lòng chọn thời giờ khác! 🐝` 
+                    message: `Lịch bị trùng với kế hoạch: "${conflict.title}". Vui lòng chọn thời giờ khác! 🐝` 
                 });
             }
 
@@ -216,30 +240,28 @@ const planController = {
                     const MySQLStart = nextStartStr;
                     const MySQLEnd = nextEndStr;
 
-                    let overlaps = [];
-                    if (isShortPlanRange(nextStartDate, nextEndDate)) {
-                        [overlaps] = await db.execute(
-                            'SELECT title FROM plans WHERE user_id = ? AND id != ? AND TIMESTAMPDIFF(SECOND, start_time, end_time) < 86400 AND start_time < ? AND end_time > ? LIMIT 1',
-                            [req.user.id, id, MySQLEnd, MySQLStart]
-                        );
+                    let overlappingRows = [];
+                    [overlappingRows] = await db.execute(
+                        'SELECT id, title, start_time, end_time FROM plans WHERE user_id = ? AND id != ? AND start_time < ? AND end_time > ? LIMIT 10',
+                        [req.user.id, id, MySQLEnd, MySQLStart]
+                    );
 
-                        if (overlaps.length === 0) {
-                            const longPlans = await getLongPlansByRange(req.user.id, MySQLStart, MySQLEnd, id);
-                            const conflict = findLongPlanDailyConflict({
-                                candidateStart: MySQLStart,
-                                candidateEnd: MySQLEnd,
-                                longPlans
-                            });
-
-                            if (conflict) {
-                                overlaps = [{ title: conflict.title }];
-                            }
-                        }
+                    const { shortPlans, longPlans } = classifyOverlapCandidates(overlappingRows);
+                    if (shortPlans.length > 0) {
+                        return res.status(400).json({ 
+                            message: `Cập nhật thất bại! Thời gian này bị trùng với kế hoạch: "${shortPlans[0].title}".` 
+                        });
                     }
 
-                    if (overlaps.length > 0) {
+                    const conflict = findLongPlanDailyConflict({
+                        candidateStart: MySQLStart,
+                        candidateEnd: MySQLEnd,
+                        longPlans
+                    });
+
+                    if (conflict) {
                         return res.status(400).json({ 
-                            message: `Cập nhật thất bại! Thời gian này bị trùng với kế hoạch: "${overlaps[0].title}".` 
+                            message: `Cập nhật thất bại! Thời gian này bị trùng với kế hoạch: "${conflict.title}".` 
                         });
                     }
                 } else {
