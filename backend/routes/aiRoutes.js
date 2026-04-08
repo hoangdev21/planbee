@@ -6,5 +6,7 @@ const authMiddleware = require('../middlewares/authMiddleware');
 router.use(authMiddleware);
 
 router.post('/chat', aiController.chat);
+router.get('/history', aiController.getHistory);
+router.delete('/history', aiController.clearHistory);
 
 module.exports = router;

@@ -9,10 +9,12 @@ const DEFAULT_SYSTEM_PROMPT = `Bạn là Bee - Trợ lý AI đặc biệt của 
 NHIỆM VỤ CHÍNH: Hỗ trợ người dùng quản lý công việc (tasks), lên lịch trình (plans), xây dựng thói quen (habits) và hướng dẫn sử dụng các tính năng của website Plan-Bee.
 
 QUY TẮC QUAN TRỌNG:
-1. CHỈ trả lời các vấn đề liên quan đến: Lập kế hoạch, quản lý thời gian, thói quen, năng suất, và các tính năng có trên website Plan-Bee.
-2. TỪ CHỐI các câu hỏi "vu vơ" hoặc ngoài phạm vi: Kiến thức tổng quát (lịch sử, địa lý, khoa học...), giải trí, triết học, toán học, lập trình phần mềm (ngo trừ hướng dẫn dùng Plan-Bee), v.v.
-3. Khi từ chối, hãy sử dụng phong cách thân thiện của Bee và khuyên người dùng nên tập trung vào việc quản lý thời gian hoặc hoàn thành kế hoạch hôm nay.
-4. Trả lời bằng tiếng Việt thân thiện, sử dụng icon 🐝 thường xuyên.`;
+1. LUÔN LUÔN sử dụng tiếng Việt 100%. Tuyệt đối không sử dụng ký tự lạ từ ngôn ngữ khác (tiếng Trung, Nhật...).
+2. Thân thiện và lịch sự: Hãy chào hỏi lại nếu người dùng chào bạn. Đừng quá khắt khe với các câu nói giao tiếp thông thường (như "chào", "hi", "cảm ơn").
+3. Tập trung chuyên môn: Sau khi chào hỏi, hãy hướng người dùng về các dịch vụ của Plan-Bee (lên kế hoạch, xem lịch, quản lý thói quen).
+4. TỪ CHỐI khéo léo các yêu cầu ngoài phạm vi (như viết code, làm toán, hay kể chuyện phi hữu ích) bằng cách nói rằng Bee được tạo ra để giúp họ tăng năng suất trên Plan-Bee.
+5. Khi người dùng yêu cầu đổi màu bằng tên gọi, hãy chuyển đổi sang mã Hex tương ứng khi dùng công cụ.
+6. Tuyệt đối không in ra các mã code kỹ thuật. Hãy trả lời tự nhiên, kèm icon 🐝.`;
 
 const isValidDate = (value) => value instanceof Date && !Number.isNaN(value.getTime());
 const toPlanDate = (dateTimeValue) => String(dateTimeValue || '').slice(0, 10);
@@ -33,7 +35,8 @@ const makeActionTag = (action, params = {}) => {
 let aiInfraReadyPromise = null;
 
 async function ensureAiInfraReady() {
-    if (aiInfraReadyPromise) return aiInfraReadyPromise;
+    // Force run to update system prompts
+    // if (aiInfraReadyPromise) return aiInfraReadyPromise;
 
     aiInfraReadyPromise = (async () => {
         try {
@@ -66,7 +69,7 @@ async function ensureAiInfraReady() {
             `);
 
             await db.execute(
-                'INSERT IGNORE INTO system_config (\`key\`, \`value\`) VALUES (?, ?)',
+                'INSERT INTO system_config (`key`, `value`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `value` = VALUES(`value`)',
                 ['ai_system_prompt', DEFAULT_SYSTEM_PROMPT]
             );
         } catch (infraError) {
@@ -105,14 +108,19 @@ async function fetchWithRotation(body) {
         const key = groqKeys[index];
 
         try {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 20000); // 20s timeout
+
             const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
                 method: "POST",
                 headers: { 
                     "Authorization": `Bearer ${key}`, 
                     "Content-Type": "application/json" 
                 },
-                body: JSON.stringify(body)
+                body: JSON.stringify(body),
+                signal: controller.signal
             });
+            clearTimeout(timeout);
 
             const reqRem = response.headers.get('x-ratelimit-remaining-requests');
             const reqLim = response.headers.get('x-ratelimit-limit-requests');
@@ -217,6 +225,39 @@ const aiController = {
         }
     },
 
+    getHistory: async (req, res) => {
+        try {
+            const userId = req.user.id;
+            const [rows] = await db.execute(
+                'SELECT message, response, created_at FROM chat_logs WHERE user_id = ? ORDER BY created_at ASC LIMIT 50',
+                [userId]
+            );
+
+            // Chuyển đổi format chat_logs sang chat history (user/assistant)
+            const history = [];
+            rows.forEach(row => {
+                history.push({ role: 'user', content: row.message });
+                history.push({ role: 'assistant', content: row.response });
+            });
+
+            res.json({ history });
+        } catch (error) {
+            console.error('Get AI History Error:', error);
+            res.status(500).json({ message: 'Lỗi khi lấy lịch sử chat.' });
+        }
+    },
+
+    clearHistory: async (req, res) => {
+        try {
+            const userId = req.user.id;
+            await db.execute('DELETE FROM chat_logs WHERE user_id = ?', [userId]);
+            res.json({ message: 'Đã xóa lịch sử chat thành công!' });
+        } catch (error) {
+            console.error('Clear AI History Error:', error);
+            res.status(500).json({ message: 'Lỗi khi xóa lịch sử chat.' });
+        }
+    },
+
     processChat: async (userId, message, history, platform = 'web') => {
         await ensureAiInfraReady();
 
@@ -312,9 +353,29 @@ ${platform === 'telegram' ? 'TRẢ LỜI TRÊN TELEGRAM: Hãy trả lời cực 
                             title: { type: "string" },
                             start_time: { type: "string", description: "YYYY-MM-DD HH:MM:SS" },
                             end_time: { type: "string", description: "YYYY-MM-DD HH:MM:SS" },
-                            color: { type: "string", description: "Hex color code" }
+                            color: { type: "string", description: "Hex color code" },
+                            priority: { type: "string", enum: ["low", "medium", "high"] }
                         },
                         required: ["title", "start_time", "end_time"]
+                    }
+                }
+            },
+            {
+                type: "function",
+                function: {
+                    name: "update_plan",
+                    description: "Update details of an existing calendar plan (color, priority, time).",
+                    parameters: {
+                        type: "object",
+                        properties: {
+                            title: { type: "string", description: "Exact title of the plan to update" },
+                            new_title: { type: "string" },
+                            start_time: { type: "string", description: "YYYY-MM-DD HH:MM:SS" },
+                            end_time: { type: "string", description: "YYYY-MM-DD HH:MM:SS" },
+                            color: { type: "string", description: "Hex color code" },
+                            priority: { type: "string", enum: ["low", "medium", "high"] }
+                        },
+                        required: ["title"]
                     }
                 }
             },
@@ -330,6 +391,23 @@ ${platform === 'telegram' ? 'TRẢ LỜI TRÊN TELEGRAM: Hãy trả lời cực 
                             description: { type: "string" },
                             frequency: { type: "string", enum: ["daily", "weekly"] },
                             preferred_time: { type: "string", description: "HH:MM:SS format" }
+                        },
+                        required: ["title"]
+                    }
+                }
+            },
+            {
+                type: "function",
+                function: {
+                    name: "update_task",
+                    description: "Update details of an existing task (title, due_date, priority).",
+                    parameters: {
+                        type: "object",
+                        properties: {
+                            title: { type: "string", description: "Exact title of the task to update" },
+                            new_title: { type: "string" },
+                            due_date: { type: "string", description: "YYYY-MM-DD HH:MM:SS" },
+                            priority: { type: "string", enum: ["low", "medium", "high"] }
                         },
                         required: ["title"]
                     }
@@ -367,10 +445,40 @@ ${platform === 'telegram' ? 'TRẢ LỜI TRÊN TELEGRAM: Hãy trả lời cực 
             }
         ];
 
+        // Làm sạch lịch sử: Đảm bảo không có tin nhắn tool lẻ loi hoặc assistant gọi tool mà không có kết quả
+        // Điều này thường xảy ra khi frontend cắt (slice) lịch sử không đúng vị trí.
+        const cleanedMessages = [];
+        for (let i = 0; i < messages.length; i++) {
+            const msg = messages[i];
+            
+            if (msg.role === 'tool') {
+                // Kiểm tra xem tin nhắn trước đó có phải là assistant gọi tool này không
+                const prev = cleanedMessages[cleanedMessages.length - 1];
+                if (prev && prev.role === 'assistant' && prev.tool_calls) {
+                    cleanedMessages.push(msg);
+                } else {
+                    console.warn('[AI] Orphaned tool message removed:', msg.tool_call_id);
+                    continue; // Bỏ qua tin nhắn tool mồ côi
+                }
+            } else if (msg.role === 'assistant' && msg.tool_calls) {
+                // Kiểm tra xem tin nhắn tiếp theo có phải là tool tương ứng không
+                const next = messages[i + 1];
+                if (next && next.role === 'tool') {
+                    cleanedMessages.push(msg);
+                } else {
+                    console.warn('[AI] Tool-calling assistant message without results removed');
+                    continue; // Bỏ qua vì không có kết quả tool đi kèm
+                }
+            } else {
+                cleanedMessages.push(msg);
+            }
+        }
+
         try {
             const data = await fetchWithRotation({
                 model: "llama-3.3-70b-versatile",
-                messages, tools, tool_choice: "auto", temperature: 0.1
+                messages: cleanedMessages, 
+                tools, tool_choice: "auto", temperature: 0.1
             });
 
             if (data.error) {
@@ -392,11 +500,21 @@ ${platform === 'telegram' ? 'TRẢ LỜI TRÊN TELEGRAM: Hãy trả lời cực 
                     const args = JSON.parse(toolCall.function.arguments);
                     let resTool = "";
 
-                    if (toolCall.function.name === "add_new_task") {
-                        const [result] = await db.execute('INSERT INTO tasks (user_id, title, due_date) VALUES (?, ?, ?)', [userId, args.title, formatDateForMySQL(args.due_date)]);
-                        await NotificationController.create(userId, `Ghi chú mới: "${args.title}"`, 'task', result.insertId);
-                        resTool = "Success";
-                    } else if (toolCall.function.name === "add_new_plan") {
+                        if (toolCall.function.name === "add_new_task") {
+                            const [result] = await db.execute('INSERT INTO tasks (user_id, title, due_date) VALUES (?, ?, ?)', [userId, args.title, formatDateForMySQL(args.due_date)]);
+                            await NotificationController.create(userId, `Ghi chú mới: "${args.title}"`, 'task', result.insertId);
+                            
+                            // Send Telegram notification if action was triggered from Web
+                            if (platform === 'web') {
+                                const date = new Date(args.due_date);
+                                const dayStr = date.toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
+                                const timeStr = `${date.getHours()}h${date.getMinutes().toString().padStart(2, '0')}`;
+                                const tgMsg = `📋 *Nhiệm vụ mới qua AI!* 🐝\n\nNhiệm vụ: *"${args.title}"*\n⏰ Hạn chót: \`${timeStr}\` - _${dayStr}_\n\n_Bee đã ghi chú lại giúp bạn rồi nhé!_ ✨`;
+                                sendSimpleMessage(userId, tgMsg).catch(e => console.error('AI Task TG notify error:', e));
+                            }
+
+                            resTool = "Success";
+                        } else if (toolCall.function.name === "add_new_plan") {
                         const startDate = new Date(args.start_time);
                         const endDate = new Date(args.end_time);
 
@@ -443,8 +561,19 @@ ${platform === 'telegram' ? 'TRẢ LỜI TRÊN TELEGRAM: Hãy trả lời cực 
                                     args.color
                                 );
 
-                                const [result] = await db.execute('INSERT INTO plans (user_id, title, start_time, end_time, color) VALUES (?, ?, ?, ?, ?)', [userId, args.title, start, end, normalizedColor]);
+                                const [result] = await db.execute('INSERT INTO plans (user_id, title, start_time, end_time, color, priority) VALUES (?, ?, ?, ?, ?, ?)', [userId, args.title, start, end, normalizedColor, args.priority || 'medium']);
                                 await NotificationController.create(userId, `Lập kế hoạch: "${args.title}"`, 'plan', result.insertId);
+                                
+                                // Send Telegram notification if action was triggered from Web
+                                if (platform === 'web') {
+                                    const s = new Date(start);
+                                    const e = new Date(end);
+                                    const dayStr = s.toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
+                                    const timeRange = `${s.getHours()}h${s.getMinutes().toString().padStart(2, '0')}-${e.getHours()}h${e.getMinutes().toString().padStart(2, '0')}`;
+                                    const tgMsg = `*Thông báo lịch mới qua AI!* 🐝\n\nBạn vừa thêm lịch: *"${args.title}"*\n📍 Thời gian: \`${timeRange}\`\n🗓️ Ngày: _${dayStr}_ \n\n_Hãy chuẩn bị thật tốt nhé!_ ✨`;
+                                    sendSimpleMessage(userId, tgMsg).catch(err => console.error('AI Plan TG notify error:', err));
+                                }
+
                                 resTool = "Success";
 
                                 if (platform === 'web') {
@@ -459,6 +588,89 @@ ${platform === 'telegram' ? 'TRẢ LỜI TRÊN TELEGRAM: Hãy trả lời cực 
                                         view: 'day'
                                     }));
                                 }
+                            }
+                        }
+                    } else if (toolCall.function.name === "update_plan") {
+                        const title = (args.title || "").trim();
+                        // Find the plan first
+                        const [plans] = await db.execute(
+                            'SELECT * FROM plans WHERE user_id = ? AND title = ? ORDER BY start_time DESC LIMIT 1',
+                            [userId, title]
+                        );
+
+                        if (plans.length === 0) {
+                            resTool = "Plan not found.";
+                        } else {
+                            const plan = plans[0];
+                            const fields = [];
+                            const params = [];
+
+                            if (args.new_title) { fields.push('title = ?'); params.push(args.new_title); }
+                            if (args.start_time) { fields.push('start_time = ?'); params.push(formatDateForMySQL(args.start_time)); }
+                            if (args.end_time) { fields.push('end_time = ?'); params.push(formatDateForMySQL(args.end_time)); }
+                            if (args.color) { fields.push('color = ?'); params.push(args.color); }
+                            if (args.priority) { fields.push('priority = ?'); params.push(args.priority); }
+
+                            if (fields.length > 0) {
+                                params.push(plan.id);
+                                
+                                // Normalize color if provided
+                                if (args.color) {
+                                    const [usedCols] = await db.execute('SELECT color FROM plans WHERE user_id = ? AND id != ?', [userId, plan.id]);
+                                    const normColor = pickUniquePlanColor(usedCols.map(r => r.color), args.color);
+                                    // Update the param in the right position
+                                    const colorIndex = fields.findIndex(f => f.startsWith('color'));
+                                    if (colorIndex !== -1) params[colorIndex] = normColor;
+                                }
+
+                                await db.execute(`UPDATE plans SET ${fields.join(', ')} WHERE id = ?`, params);
+                                resTool = "Updated plan successfully.";
+
+                                if (platform === 'web') {
+                                    actionTags.push(makeActionTag('view_plan', {
+                                        id: plan.id,
+                                        title: args.new_title || plan.title,
+                                        start_time: args.start_time ? formatDateForMySQL(args.start_time) : plan.start_time,
+                                        end_time: args.end_time ? formatDateForMySQL(args.end_time) : plan.end_time,
+                                        color: args.color || plan.color,
+                                        priority: args.priority || plan.priority,
+                                        view: 'day'
+                                    }));
+                                }
+                            } else {
+                                resTool = "No changes requested for plan.";
+                            }
+                        }
+                    } else if (toolCall.function.name === "update_task") {
+                        const title = (args.title || "").trim();
+                        const [tasks] = await db.execute('SELECT * FROM tasks WHERE user_id = ? AND title = ? LIMIT 1', [userId, title]);
+                        
+                        if (tasks.length === 0) {
+                            resTool = "Task not found.";
+                        } else {
+                            const task = tasks[0];
+                            const fields = [];
+                            const params = [];
+
+                            if (args.new_title) { fields.push('title = ?'); params.push(args.new_title); }
+                            if (args.due_date) { fields.push('due_date = ?'); params.push(formatDateForMySQL(args.due_date)); }
+                            if (args.priority) { fields.push('priority = ?'); params.push(args.priority); }
+
+                            if (fields.length > 0) {
+                                params.push(task.id);
+                                await db.execute(`UPDATE tasks SET ${fields.join(', ')} WHERE id = ?`, params);
+                                resTool = "Updated task successfully.";
+                                
+                                if (platform === 'web') {
+                                    actionTags.push(makeActionTag('view_task', {
+                                        id: task.id,
+                                        title: args.new_title || task.title,
+                                        due_date: args.due_date ? formatDateForMySQL(args.due_date) : task.due_date,
+                                        priority: args.priority || task.priority
+                                    }));
+                                }
+                            } else {
+                                resTool = "No changes requested for task.";
                             }
                         }
                     } else if (toolCall.function.name === "add_new_habit") {
@@ -518,11 +730,11 @@ ${platform === 'telegram' ? 'TRẢ LỜI TRÊN TELEGRAM: Hãy trả lời cực 
                 }
 
                 const secondaryData = await fetchWithRotation({ model: "llama-3.3-70b-versatile", messages });
-                finalResponse = secondaryData.choices && secondaryData.choices[0] && secondaryData.choices[0].message
-                    ? secondaryData.choices[0].message.content
-                    : '';
+                if (secondaryData && secondaryData.choices && secondaryData.choices[0] && secondaryData.choices[0].message) {
+                    finalResponse = secondaryData.choices[0].message.content || "";
+                }
             } else {
-                finalResponse = messageObj.content;
+                finalResponse = messageObj.content || "";
             }
 
             // Dọn dẹp lỗi output dư thừa (nếu có)
@@ -531,19 +743,20 @@ ${platform === 'telegram' ? 'TRẢ LỜI TRÊN TELEGRAM: Hãy trả lời cực 
             }
 
             if (platform === 'web' && actionTags.length > 0) {
-                const baseText = finalResponse && finalResponse.trim() ? finalResponse.trim() : 'Xong rồi nè 🐝';
+                const baseText = finalResponse && finalResponse.trim() ? finalResponse.trim() : 'Bee đã thực hiện xong yêu cầu của bạn rồi nhé! ✨';
                 finalResponse = `${baseText}\n${actionTags.join('\n')}`;
             }
 
-            // 2. LOG CHAT
-            try {
-                await db.execute(
-                    'INSERT INTO chat_logs (user_id, message, response, tokens_used) VALUES (?, ?, ?, ?)',
-                    [userId, message, finalResponse, data.usage?.total_tokens || 0]
-                );
-            } catch (logError) {
-                console.warn('[AI] Skip chat_logs insert:', logError.message);
+            // Fallback cuối cùng nếu vẫn trống
+            if (!finalResponse || finalResponse.trim() === "") {
+                finalResponse = "Bee đã thực hiện xong rồi nè! Có gì cần Bee hỗ trợ tiếp không bạn? 🐝✨";
             }
+
+            // 2. LOG CHAT (Non-blocking to prevent congestion)
+            db.execute(
+                'INSERT INTO chat_logs (user_id, message, response, tokens_used) VALUES (?, ?, ?, ?)',
+                [userId, message, finalResponse, data.usage?.total_tokens || 0]
+            ).catch(logError => console.warn('[AI] Skip chat_logs insert:', logError.message));
 
             return finalResponse;
         } catch (error) {

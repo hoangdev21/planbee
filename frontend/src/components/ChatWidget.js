@@ -2,23 +2,76 @@ import api from '../utils/api.js';
 
 let isExpanded = false;
 let isFullscreen = false;
-// Migration: Ensure old roles like 'bot' are converted to 'assistant' for API compatibility
-let chatHistory = JSON.parse(localStorage.getItem('bee_chat_history') || '[]').map(msg => ({
-    ...msg,
-    role: msg.role === 'bot' ? 'assistant' : msg.role
-}));
-localStorage.setItem('bee_chat_history', JSON.stringify(chatHistory));
+let chatHistory = []; // Initialize empty, will be loaded per-user
 
-export const initChatWidget = () => {
+const getUserIdFromToken = () => {
+    const token = localStorage.getItem('token');
+    if (!token) return null;
+    try {
+        const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+        const payload = JSON.parse(atob(base64));
+        return payload.id;
+    } catch (e) {
+        return null;
+    }
+};
+
+const getHistoryKey = () => {
+    const userId = getUserIdFromToken();
+    return userId ? `bee_chat_history_${userId}` : 'bee_chat_history_guest';
+};
+
+export const initChatWidget = async () => {
     const token = localStorage.getItem('token');
     if (!token || token === 'undefined' || token === 'null') {
-
         const existing = document.getElementById('bee-chat-widget');
         if (existing) existing.remove();
         return;
     }
+
+    // Load history from Backend for synchronization (Realtime sync)
+    // and use user-specific localStorage as a temporary cache
+    const historyKey = getHistoryKey();
+    const localHist = JSON.parse(localStorage.getItem(historyKey) || '[]');
+    chatHistory = localHist.map(msg => ({
+        ...msg,
+        role: msg.role === 'bot' ? 'assistant' : msg.role
+    }));
+
+    // Trigger background sync from server
+    try {
+        const res = await api.get('/ai/history');
+        if (res.history && res.history.length > 0) {
+            chatHistory = res.history;
+            localStorage.setItem(historyKey, JSON.stringify(chatHistory));
+            
+            // If widget already rendered, we might need a refresh of the message box
+            const msgBox = document.getElementById('chat-messages-box');
+            if (msgBox && isExpanded) {
+                renderMessagesOnly(msgBox);
+            }
+        }
+    } catch (err) {
+        console.warn('Sync AI history failed, using local cache:', err.message);
+    }
+    
     if (document.getElementById('bee-chat-widget')) return;
     const widget = document.createElement('div');
+
+    // Realtime Sync: Poll for new history every 30 seconds
+    setInterval(async () => {
+        if (isExpanded && localStorage.getItem('token')) {
+            try {
+                const res = await api.get('/ai/history');
+                if (res.history && res.history.length !== chatHistory.length) {
+                    chatHistory = res.history;
+                    localStorage.setItem(getHistoryKey(), JSON.stringify(chatHistory));
+                    const msgBox = document.getElementById('chat-messages-box');
+                    renderMessagesOnly(msgBox);
+                }
+            } catch (e) {}
+        }
+    }, 30000);
     widget.id = 'bee-chat-widget';
     widget.className = 'chat-widget-closed';
     renderMinimized(widget);
@@ -322,19 +375,7 @@ const renderExpanded = (container) => {
                     <button id="chat-close" title="Đóng"><i class="fas fa-times"></i></button>
                 </div>
             </div>
-            <div class="chat-messages" id="chat-messages-box">
-                <div class="msg-group msg-bot">
-                    <img src="/bot-bee.png" class="chat-avatar">
-                    <div class="msg-content">Chào bạn! Bee ở đây để giúp bạn lên kế hoạch, thống kê cũng như giải đáp mọi thắc mắc về PlanBee. Hôm nay bạn cần Bee giúp gì không? 🐝</div>
-                </div>
-                ${chatHistory.map(msg => `
-                    <div class="msg-group msg-${msg.role === 'user' ? 'user' : 'bot'}">
-                        <img src="${msg.role === 'user' ? '/user.png' : '/bot-bee.png'}" class="chat-avatar">
-                        <div class="msg-content">${msg.role === 'user' ? escapeHtml(msg.content || '') : parseActionLinks(msg.content)}</div>
-                    </div>
-                `).join('')}
-            </div>
-
+            <div class="chat-messages" id="chat-messages-box"></div>
             <div class="chat-input-area">
                 <input type="text" id="chat-input" placeholder="Hỏi Bee bất cứ điều gì..." autocomplete="off">
                 <button id="chat-send"><i class="fas fa-paper-plane"></i></button>
@@ -343,9 +384,9 @@ const renderExpanded = (container) => {
     `;
 
     const msgBox = document.getElementById('chat-messages-box');
+    renderMessagesOnly(msgBox);
     msgBox.scrollTop = msgBox.scrollHeight;
-    attachActionListeners(msgBox, container);
-
+    
     const chatInput = document.getElementById('chat-input');
     const sendBtn = document.getElementById('chat-send');
     const closeBtn = document.getElementById('chat-close');
@@ -358,7 +399,9 @@ const renderExpanded = (container) => {
         msgBox.innerHTML += `<div class="msg-group msg-user"><img src="/user.png" class="chat-avatar"><div class="msg-content">${escapeHtml(text)}</div></div>`;
         chatInput.value = '';
         msgBox.scrollTop = msgBox.scrollHeight;
+        
         chatHistory.push({ role: "user", content: text });
+        localStorage.setItem(getHistoryKey(), JSON.stringify(chatHistory));
         
         const typingId = "typing-" + Date.now();
         msgBox.innerHTML += `<div class="msg-group msg-bot" id="${typingId}"><img src="/bot-bee.png" class="chat-avatar"><div class="msg-content typing-dots">Bee đang suy nghĩ...</div></div>`;
@@ -380,8 +423,9 @@ const renderExpanded = (container) => {
             // Apply typing effect
             await typeEffect(contentEl, parsedContent, 10);
             
+            
             chatHistory.push({ role: "assistant", content: res.result });
-            localStorage.setItem('bee_chat_history', JSON.stringify(chatHistory));
+            localStorage.setItem(getHistoryKey(), JSON.stringify(chatHistory));
             attachActionListeners(msgBox, container);
         } catch (err) {
             const typingMsg = document.getElementById(typingId);
@@ -411,12 +455,21 @@ const renderExpanded = (container) => {
         }, 400); 
     };
 
-    clearBtn.onclick = (e) => {
+    clearBtn.onclick = async (e) => {
         e.stopPropagation();
-        if (confirm('Xóa sạch lịch sử trò chuyện?')) {
-            chatHistory = [];
-            localStorage.removeItem('bee_chat_history');
-            renderExpanded(container);
+        if (confirm('Xóa sạch lịch sử trò chuyện? (Thực hiện trên mọi thiết bị)')) {
+            try {
+                // Xóa trên Server trước
+                await api.delete('/ai/history');
+                
+                // Sau đó xóa ở Local
+                chatHistory = [];
+                localStorage.removeItem(getHistoryKey());
+                renderExpanded(container);
+            } catch (err) {
+                console.error('Clear history error:', err);
+                alert('Không thể xóa lịch sử trên server, hãy thử lại sau!');
+            }
         }
     };
 
@@ -425,6 +478,27 @@ const renderExpanded = (container) => {
         isFullscreen = !isFullscreen;
         renderExpanded(container);
     };
+};
+
+const renderMessagesOnly = (msgBox) => {
+    if (!msgBox) return;
+    msgBox.innerHTML = `
+        <div class="msg-group msg-bot">
+            <img src="/bot-bee.png" class="chat-avatar">
+            <div class="msg-content">Chào bạn! Bee ở đây để giúp bạn lên kế hoạch, thống kê cũng như giải đáp mọi thắc mắc về PlanBee. Hôm nay bạn cần Bee giúp gì không? 🐝</div>
+        </div>
+        ${chatHistory.map(msg => `
+            <div class="msg-group msg-${msg.role === 'user' ? 'user' : 'bot'}">
+                <img src="${msg.role === 'user' ? '/user.png' : '/bot-bee.png'}" class="chat-avatar">
+                <div class="msg-content">${msg.role === 'user' ? escapeHtml(msg.content || '') : parseActionLinks(msg.content)}</div>
+            </div>
+        `).join('')}
+    `;
+    msgBox.scrollTop = msgBox.scrollHeight;
+    
+    // Action listeners need to be re-attached because we replaced innerHTML
+    const widget = document.getElementById('bee-chat-widget');
+    if (widget) attachActionListeners(msgBox, widget);
 };
 
 const showBeeGuide = (params = {}) => {
