@@ -68,26 +68,37 @@ const ALLOWED_ORIGINS = [
     'http://127.0.0.1:3000',
 ].filter(Boolean);
 
-const UNIQUE_ALLOWED_ORIGINS = [...new Set(ALLOWED_ORIGINS)];
+const UNIQUE_ALLOWED_ORIGINS = new Set(ALLOWED_ORIGINS);
+const ALLOWED_ORIGIN_PATTERNS = [
+    /^https:\/\/(?:[a-z0-9-]+\.)?planbee\.me$/i,
+    /^http:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?$/i,
+];
 
-app.use(cors({
+const isOriginAllowed = (origin = '') => {
+    const normalizedOrigin = origin.trim().replace(/\/+$/, '');
+    return UNIQUE_ALLOWED_ORIGINS.has(normalizedOrigin)
+        || ALLOWED_ORIGIN_PATTERNS.some((pattern) => pattern.test(normalizedOrigin));
+};
+
+const CORS_OPTIONS = {
     origin: (origin, callback) => {
         // Allow requests with no origin (like mobile apps or curl)
         if (!origin) return callback(null, true);
-        
-        const normalizedOrigin = origin.replace(/\/+$/, '');
-        if (UNIQUE_ALLOWED_ORIGINS.includes(normalizedOrigin)) {
+
+        if (isOriginAllowed(origin)) {
             callback(null, true);
         } else {
             console.warn(`[CORS] Rejected: ${origin}`);
-            // Instead of error, we can return false to let the browser handle it via its policy
-            callback(null, false);
+            callback(new Error('CORS not allowed'));
         }
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
-}));
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    optionsSuccessStatus: 204,
+};
+
+app.use(cors(CORS_OPTIONS));
 app.use(bodyParser.json());
 app.use(cookieParser());
 app.use(express.static('public'));
