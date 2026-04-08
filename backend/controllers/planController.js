@@ -1,5 +1,5 @@
 const db = require('../config/db');
-const { formatDateForMySQL } = require('../utils/dateFormatter');
+const { formatDateForMySQL, wallClockToUtcDate } = require('../utils/dateFormatter');
 const { pickUniquePlanColor, normalizeHexColor } = require('../utils/planColor');
 const { isShortPlanRange, findLongPlanDailyConflict } = require('../utils/planOverlap');
 const NotificationController = require('./notificationController');
@@ -93,19 +93,18 @@ const planController = {
                 return res.status(400).json({ message: 'Vui lòng nhập tên, thời gian bắt đầu và kết thúc!' });
             }
 
-            const startDate = new Date(start_time);
-            const endDate = new Date(end_time);
+            const MySQLStart = formatDateForMySQL(start_time);
+            const MySQLEnd = formatDateForMySQL(end_time);
+            const startDate = wallClockToUtcDate(MySQLStart);
+            const endDate = wallClockToUtcDate(MySQLEnd);
 
-            if (!isValidDate(startDate) || !isValidDate(endDate)) {
+            if (!isValidDate(startDate) || !isValidDate(endDate) || !MySQLStart || !MySQLEnd) {
                 return res.status(400).json({ message: 'Thời gian không hợp lệ.' });
             }
 
             if (startDate >= endDate) {
                 return res.status(400).json({ message: 'Thời gian kết thúc phải sau thời gian bắt đầu!' });
             }
-
-            const MySQLStart = formatDateForMySQL(startDate);
-            const MySQLEnd = formatDateForMySQL(endDate);
 
             let overlaps = [];
             if (isShortPlanRange(startDate, endDate)) {
@@ -147,10 +146,11 @@ const planController = {
             // Send instant Telegram notification
             const { sendSimpleMessage } = require('../services/telegramSender');
             if (sendSimpleMessage) {
-                const start = new Date(start_time);
-                const end = new Date(end_time);
-                const dayStr = start.toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
-                const timeRange = `${start.getHours()}h${start.getMinutes().toString().padStart(2, '0')}-${end.getHours()}h${end.getMinutes().toString().padStart(2, '0')}`;
+                const start = wallClockToUtcDate(MySQLStart) || new Date();
+                const end = wallClockToUtcDate(MySQLEnd) || new Date(start.getTime() + 60 * 60 * 1000);
+                const viOpts = { timeZone: 'Asia/Ho_Chi_Minh', hour12: false };
+                const dayStr = start.toLocaleDateString('vi-VN', { ...viOpts, weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
+                const timeRange = `${start.toLocaleTimeString('vi-VN', { ...viOpts, hour: '2-digit', minute: '2-digit' }).replace(':', 'h')}-${end.toLocaleTimeString('vi-VN', { ...viOpts, hour: '2-digit', minute: '2-digit' }).replace(':', 'h')}`;
                 
                 const tgMsg = `*Thông báo lịch mới!* 🐝\nBạn đã thêm một lịch trình mới: *"${title}"*\n📍 Thời gian: \`${timeRange}\`\n🗓️ Ngày: _${dayStr}_ \n\n_Hãy chuẩn bị tốt nhất để hoàn thành công việc nhé!_ ✨`;
                 await sendSimpleMessage(req.user.id, tgMsg);
@@ -200,8 +200,10 @@ const planController = {
                 // We need the current or new values to check overlaps
                 const [current] = await db.execute('SELECT start_time, end_time FROM plans WHERE id = ? AND user_id = ?', [id, req.user.id]);
                 if (current.length > 0) {
-                    const nextStartDate = new Date(updates.start_time || current[0].start_time);
-                    const nextEndDate = new Date(updates.end_time || current[0].end_time);
+                    const nextStartStr = formatDateForMySQL(updates.start_time || current[0].start_time);
+                    const nextEndStr = formatDateForMySQL(updates.end_time || current[0].end_time);
+                    const nextStartDate = wallClockToUtcDate(nextStartStr);
+                    const nextEndDate = wallClockToUtcDate(nextEndStr);
 
                     if (!isValidDate(nextStartDate) || !isValidDate(nextEndDate)) {
                         return res.status(400).json({ message: 'Thời gian không hợp lệ.' });
@@ -211,8 +213,8 @@ const planController = {
                         return res.status(400).json({ message: 'Thời gian kết thúc phải sau thời gian bắt đầu!' });
                     }
 
-                    const MySQLStart = formatDateForMySQL(nextStartDate);
-                    const MySQLEnd = formatDateForMySQL(nextEndDate);
+                    const MySQLStart = nextStartStr;
+                    const MySQLEnd = nextEndStr;
 
                     let overlaps = [];
                     if (isShortPlanRange(nextStartDate, nextEndDate)) {

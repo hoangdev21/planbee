@@ -16,7 +16,7 @@ const parseBooleanEnv = (value, fallback = false) => {
 // Default: polling OFF to avoid duplicate getUpdates conflicts on hosted environments.
 const TELEGRAM_POLLING_ENABLED = parseBooleanEnv(
     process.env.TELEGRAM_POLLING_ENABLED,
-    false
+    true
 );
 
 if (!token) {

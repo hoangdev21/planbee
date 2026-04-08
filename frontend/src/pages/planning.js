@@ -1,5 +1,5 @@
 import api from '../utils/api.js';
-import { formatDateToYYYYMMDD, formatDateTimeToLocal } from '../utils/dateFormatter.js';
+import { formatDateToYYYYMMDD, formatDateTimeToLocal, parseToLocalDate } from '../utils/dateFormatter.js';
 
 let currentDate = new Date();
 let currentView = 'day'; // 'day', 'week', 'month'
@@ -153,15 +153,17 @@ export const renderPlanning = async (container, params = {}) => {
 };
 
 const getPlanType = (p) => {
-    const start = new Date(p.start_time), end = new Date(p.end_time);
+    const start = parseToLocalDate(p.start_time) || new Date(p.start_time);
+    const end = parseToLocalDate(p.end_time) || new Date(p.end_time);
     const diffHours = (end - start) / (1000 * 60 * 60);
-    const diffDays = (new Date(end.toDateString()) - new Date(start.toDateString())) / (1000 * 60 * 60 * 24);
-    if (diffHours >= 24 || diffDays > 0) return 'all-day';
+    // Cross-midnight plans (e.g. 23:00 → 06:00 next day) should still be rendered as hourly blocks,
+    // even though they span 2 calendar dates. Only treat as "all-day" when duration is >= 24 hours.
+    if (diffHours >= 24) return 'all-day';
     return 'hourly';
 };
 
 const getMinutesOfDay = (dateValue) => {
-    const d = new Date(dateValue);
+    const d = parseToLocalDate(dateValue) || new Date(dateValue);
     if (isNaN(d.getTime())) return 0;
     return (d.getHours() * 60) + d.getMinutes();
 };
@@ -738,21 +740,111 @@ const changeDate = (d) => { if (currentView === 'day') currentDate.setDate(curre
 const getStartOfWeek = (d) => { const date = new Date(d); const day = date.getDay(); const diff = date.getDate() - day + (day === 0 ? -6 : 1); return new Date(date.setDate(diff)); };
 
 const renderOverdueBanner = (tasks) => {
-    const overdue = tasks.filter(t => t.status !== 'completed' && t.due_date && new Date(t.due_date) < new Date());
+    const now = Date.now();
+    const overdue = tasks.filter(t => {
+        if (t.status === 'completed' || !t.due_date) return false;
+        const d = parseToLocalDate(t.due_date);
+        return d ? d.getTime() < now : false;
+    });
     const c = overdue.length;
     if (c === 0) return '';
     
-    // Show names of first 2 overdue tasks
-    const names = overdue.slice(0, 2).map(t => t.title).join(', ');
-    const more = c > 2 ? ` và ${c - 2} việc khác` : '';
+    const preview = overdue
+        .slice(0, 3)
+        .map((t) => {
+            const due = parseToLocalDate(t.due_date);
+            const time = due
+                ? due.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+                : '';
+            return { title: t.title, time };
+        });
     
     return `
-        <div class="overdue-banner" style="background:rgba(214,48,49,0.06); padding:12px 20px; border-radius:12px; color:var(--danger); font-weight:800; font-size:0.88rem; margin-bottom:16px; border-left:4px solid var(--danger); display:flex; align-items:center; justify-content:space-between;">
-            <div style="display:flex; align-items:center; gap:12px;">
-                <i class="fas fa-exclamation-circle" style="font-size:1.1rem;"></i>
-                <span>Bạn có ${c} việc quá hạn: <strong>${names}${more}</strong></span>
+        <div class="overdue-banner" style="
+            background: linear-gradient(135deg, rgba(214,48,49,0.12), rgba(214,48,49,0.05));
+            padding: 16px 18px;
+            border-radius: 18px;
+            border: 1px solid rgba(214,48,49,0.20);
+            display:flex;
+            align-items: stretch;
+            justify-content: space-between;
+            gap: 16px;
+            flex-wrap: wrap;
+            box-shadow: 0 14px 40px rgba(214,48,49,0.10);
+        ">
+            <div style="display:flex; gap:14px; align-items:flex-start; min-width: 280px; flex: 1;">
+                <div style="
+                    width: 44px;
+                    height: 44px;
+                    border-radius: 14px;
+                    background: rgba(214,48,49,0.16);
+                    color: var(--danger);
+                    display:flex;
+                    align-items:center;
+                    justify-content:center;
+                    flex-shrink:0;
+                ">
+                    <i class="fas fa-triangle-exclamation" style="font-size:1.1rem;"></i>
+                </div>
+
+                <div style="display:flex; flex-direction:column; gap:10px; min-width: 0; flex: 1;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+                        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                            <span style="color: var(--danger); font-weight: 950; letter-spacing: -0.2px; font-size: 0.98rem;">Việc quá hạn</span>
+                            <span style="background: rgba(214,48,49,0.18); color: var(--danger); padding: 4px 10px; border-radius: 999px; font-weight: 950; font-size: 0.78rem;">${c} mục</span>
+                        </div>
+                        <span style="color: rgba(214,48,49,0.78); font-weight: 850; font-size: 0.78rem;">Cần xử lý sớm</span>
+                    </div>
+
+                    <div style="display:flex; flex-direction:column; gap:6px;">
+                        ${preview.map((x) => `
+                            <div style="
+                                display:flex;
+                                align-items:center;
+                                justify-content:space-between;
+                                gap: 12px;
+                                padding: 10px 12px;
+                                border-radius: 14px;
+                                background: rgba(255,255,255,0.65);
+                                border: 1px solid rgba(214,48,49,0.12);
+                            ">
+                                <div style="min-width:0; display:flex; align-items:center; gap:10px;">
+                                    <span style="width:8px; height:8px; border-radius:999px; background: rgba(214,48,49,0.7);"></span>
+                                    <span style="font-weight: 900; color: rgba(30, 41, 59, 0.95); font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${x.title}</span>
+                                </div>
+                                <span style="font-weight: 950; color: rgba(214,48,49,0.92); font-size: 0.78rem; white-space: nowrap;">${x.time || ''}</span>
+                            </div>
+                        `).join('')}
+                        ${c > 3 ? `<div style="font-weight: 850; color: rgba(214,48,49,0.85); font-size: 0.78rem; padding-left: 4px;">+ ${c - 3} mục quá hạn khác</div>` : ''}
+                    </div>
+                </div>
             </div>
-            <button onclick="window.location.hash = '#tasks'" style="background:var(--danger); color:white; border:none; padding:6px 14px; border-radius:8px; font-size:0.75rem; font-weight:900; cursor:pointer; transition: 0.2s;" onmouseover="this.style.opacity=0.9" onmouseout="this.style.opacity=1">XEM TẤT CẢ</button>
+
+            <div style="display:flex; gap:10px; align-items:center; justify-content:flex-end;">
+                <button onclick="window.location.hash = '#/tasks?tab=overdue'" style="
+                    background: var(--danger);
+                    color: white;
+                    border: none;
+                    padding: 11px 14px;
+                    border-radius: 14px;
+                    font-size: 0.82rem;
+                    font-weight: 950;
+                    cursor: pointer;
+                    box-shadow: 0 12px 26px rgba(214,48,49,0.22);
+                    white-space: nowrap;
+                ">Xem danh sách</button>
+                <button onclick="window.location.hash = '#/planning'" style="
+                    background: rgba(0,0,0,0.04);
+                    color: var(--text-main);
+                    border: 1px solid rgba(0,0,0,0.08);
+                    padding: 11px 12px;
+                    border-radius: 14px;
+                    font-size: 0.82rem;
+                    font-weight: 900;
+                    cursor: pointer;
+                    white-space: nowrap;
+                ">Để sau</button>
+            </div>
         </div>
     `;
 };
@@ -766,7 +858,14 @@ const renderCurrentView = (tasks, habits, plans) => {
 const renderDayView = (t, h, p) => {
     const ds = formatDateToYYYYMMDD(currentDate);
     const dayPlans = p.filter(x => ds >= formatDateToYYYYMMDD(x.start_time) && ds <= formatDateToYYYYMMDD(x.end_time));
-    const dayTasks = t.filter(x => (x.due_date && x.due_date.startsWith(ds)) || (x.status !== 'completed' && x.due_date && new Date(x.due_date) < new Date()));
+    const now = Date.now();
+    const dayTasks = t.filter(x => {
+        if (!x.due_date) return false;
+        const dueKey = formatDateToYYYYMMDD(x.due_date);
+        const due = parseToLocalDate(x.due_date);
+        const isOverdue = x.status !== 'completed' && due && due.getTime() < now;
+        return dueKey === ds || isOverdue;
+    });
     const allday = dayPlans.filter(x => getPlanType(x) === 'all-day');
     const timedBlocks = buildTimedBlocksForDate(dayPlans, ds);
     
@@ -781,7 +880,8 @@ const renderDayView = (t, h, p) => {
             <div style="display:flex; gap:14px; align-items:center; flex-wrap:wrap;">
                 <small style="font-weight:900; opacity:0.6;">NHIỆM VỤ:</small>
                 ${dayTasks.map(x=>{
-                    const isOverdue = new Date(x.due_date) < new Date() && x.status !== 'completed';
+                    const due = parseToLocalDate(x.due_date);
+                    const isOverdue = Boolean(due && due.getTime() < now && x.status !== 'completed');
                     return `<div class="task-pill task-event ${x.status === 'completed' ? 'done' : ''} ${isOverdue ? 'overdue' : ''}" data-id="${x.id}" style="border-left: 3.5px solid ${isOverdue ? 'var(--danger)' : '#6c5ce7'}; background: ${isOverdue ? 'rgba(214,48,49,0.1)' : 'rgba(108,92,231,0.1)'}; color: ${isOverdue ? 'var(--danger)' : '#6c5ce7'}; display:flex; align-items:center; gap:6px; padding: 4px 12px; border-radius:20px; font-size: 0.75rem; font-weight: 800; cursor:pointer;">
                         ${x.status === 'completed' ? '<img src="/complete.png" style="width:14px; height:14px; object-fit:contain;">' : `<i class="fas ${isOverdue ? 'fa-clock' : 'fa-check-double'}" style="font-size:0.65rem;"></i>`} ${x.title} ${isOverdue ? '<span style="opacity:0.7; font-size:0.65rem;">(Quá hạn)</span>' : ''}
                     </div>`

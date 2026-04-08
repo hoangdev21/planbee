@@ -17,7 +17,10 @@ const parseBooleanEnv = (value, fallback = false) => {
     return ['1', 'true', 'yes', 'on'].includes(String(value).trim().toLowerCase());
 };
 
-const START_TELEGRAM_BOT = parseBooleanEnv(process.env.START_TELEGRAM_BOT, false);
+const START_TELEGRAM_BOT = parseBooleanEnv(
+    process.env.START_TELEGRAM_BOT,
+    Boolean((process.env.TELEGRAM_BOT_TOKEN || '').trim())
+);
 const START_REMINDER_SERVICE = parseBooleanEnv(process.env.START_REMINDER_SERVICE, false);
 const ENABLE_SELF_PING = parseBooleanEnv(process.env.ENABLE_SELF_PING, false);
 const IS_RENDER_RUNTIME = parseBooleanEnv(process.env.RENDER, false) || Boolean(process.env.RENDER_SERVICE_ID);
@@ -103,7 +106,8 @@ const CORS_OPTIONS = {
 
 app.use(cors(CORS_OPTIONS));
 // Ensure preflight requests always get CORS headers
-app.options('*', cors(CORS_OPTIONS));
+// Express v5 + path-to-regexp does not allow "*" as a path.
+app.options(/.*/, cors(CORS_OPTIONS));
 app.use(bodyParser.json());
 app.use(cookieParser());
 app.use(express.static('public'));

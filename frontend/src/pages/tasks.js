@@ -1,4 +1,5 @@
 import api from '../utils/api.js';
+import { parseToLocalDate } from '../utils/dateFormatter.js';
 
 let currentTab = 'all';
 let currentPage = 1;
@@ -31,6 +32,8 @@ export const renderTasks = async (container, params = {}) => {
         ]);
         
         const now = new Date();
+        const initialTab = (params.tab || '').trim();
+        if (initialTab) currentTab = initialTab;
         
         // 1. Process, Filter and Categorize
         const allItems = [
@@ -39,21 +42,18 @@ export const renderTasks = async (container, params = {}) => {
         ]
         .filter(item => !item.title.startsWith('Cập nhật trạng thái')) // Filter out system tasks
         .map(item => {
-            const date = new Date(item.due_date || item.start_time);
-            const endDate = item.end_time ? new Date(item.end_time) : date;
+            const date = parseToLocalDate(item.due_date || item.start_time) || new Date(item.due_date || item.start_time);
+            const endDate = item.end_time
+                ? (parseToLocalDate(item.end_time) || new Date(item.end_time))
+                : date;
             
             let status = item.status || 'pending';
-            
-            // Auto-complete logic for past items
-            if (status !== 'completed' && status !== 'cancelled' && endDate < now) {
-                status = 'completed';
-            }
 
             let category = 'upcoming';
             if (status === 'completed') category = 'completed';
             else if (status === 'cancelled') category = 'cancelled';
+            else if (endDate < now) category = 'overdue';
             else if (now >= date && now <= endDate) category = 'in-progress';
-            else if (now > endDate) category = 'completed';
 
             return { ...item, status, category, date, endDate };
         }).sort((a, b) => a.date - b.date);
@@ -93,8 +93,8 @@ export const renderTasks = async (container, params = {}) => {
                     <!-- Filter Tabs -->
                     <div class="filter-tabs-wrapper">
                         <div class="filter-tabs-container">
-                            ${['all', 'in-progress', 'upcoming', 'completed', 'cancelled'].map(tab => {
-                                const labels = { all: 'Tất cả', 'in-progress': 'Đang làm', upcoming: 'Sắp tới', completed: 'Hoàn thành', cancelled: 'Đã hủy' };
+                            ${['all', 'overdue', 'in-progress', 'upcoming', 'completed', 'cancelled'].map(tab => {
+                                const labels = { all: 'Tất cả', overdue: 'Quá hạn', 'in-progress': 'Đang làm', upcoming: 'Sắp tới', completed: 'Hoàn thành', cancelled: 'Đã hủy' };
                                 const isActive = currentTab === tab;
                                 return `
                                     <button class="filter-tab-btn ${isActive ? 'active' : ''}" data-tab="${tab}">

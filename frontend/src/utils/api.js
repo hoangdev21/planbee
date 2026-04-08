@@ -19,16 +19,25 @@ const buildApiBaseCandidates = () => {
     const local = isLocalHost();
     const candidates = [];
 
-    if (configuredBase) {
-        candidates.push(configuredBase);
-    }
+    if (local) {
+        // In local development, always prefer local backend first.
+        candidates.push(LOCAL_BACKEND_FALLBACK);
 
-    if (!local && shouldTrySameOriginApi()) {
-        // Optional: Only try same-origin when hosting provides /api rewrites.
-        candidates.push(normalizeBaseUrl(window.location.origin));
-    }
+        if (configuredBase) {
+            candidates.push(configuredBase);
+        }
+    } else {
+        if (configuredBase) {
+            candidates.push(configuredBase);
+        }
 
-    candidates.push(local ? LOCAL_BACKEND_FALLBACK : PROD_BACKEND_FALLBACK);
+        if (shouldTrySameOriginApi()) {
+            // Optional: Only try same-origin when hosting provides /api rewrites.
+            candidates.push(normalizeBaseUrl(window.location.origin));
+        }
+
+        candidates.push(PROD_BACKEND_FALLBACK);
+    }
 
     return [...new Set(candidates.filter(Boolean).map(toApiBaseUrl))];
 };
