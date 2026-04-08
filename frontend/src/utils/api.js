@@ -9,18 +9,23 @@ const normalizeBaseUrl = (value = '') => String(value).trim().replace(/\/+$/, ''
 const toApiBaseUrl = (baseUrl) =>
     baseUrl.endsWith('/api') ? baseUrl : `${baseUrl}/api`;
 
+const shouldTrySameOriginApi = () => {
+    const flag = String(import.meta.env.VITE_API_SAME_ORIGIN || '').trim().toLowerCase();
+    return ['1', 'true', 'yes', 'on'].includes(flag);
+};
+
 const buildApiBaseCandidates = () => {
     const configuredBase = normalizeBaseUrl(import.meta.env.VITE_API_BASE_URL || '');
     const local = isLocalHost();
     const candidates = [];
 
-    if (!local) {
-        // Same-origin first to avoid browser-side CORS when frontend hosting supports /api rewrites.
-        candidates.push(normalizeBaseUrl(window.location.origin));
-    }
-
     if (configuredBase) {
         candidates.push(configuredBase);
+    }
+
+    if (!local && shouldTrySameOriginApi()) {
+        // Optional: Only try same-origin when hosting provides /api rewrites.
+        candidates.push(normalizeBaseUrl(window.location.origin));
     }
 
     candidates.push(local ? LOCAL_BACKEND_FALLBACK : PROD_BACKEND_FALLBACK);

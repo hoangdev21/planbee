@@ -102,6 +102,8 @@ const CORS_OPTIONS = {
 };
 
 app.use(cors(CORS_OPTIONS));
+// Ensure preflight requests always get CORS headers
+app.options('*', cors(CORS_OPTIONS));
 app.use(bodyParser.json());
 app.use(cookieParser());
 app.use(express.static('public'));
