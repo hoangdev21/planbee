@@ -157,6 +157,63 @@ if (!token) {
         bot.sendMessage(chatId, helpMsg, { parse_mode: 'Markdown' });
     });
 
+    bot.onText(/\/whoami/, async (msg) => {
+        const chatId = msg.chat.id;
+        try {
+            const [users] = await db.execute(
+                'SELECT id, username, email, full_name FROM users WHERE telegram_chat_id = ? LIMIT 1',
+                [chatId]
+            );
+
+            if (users.length === 0) {
+                await bot.sendMessage(chatId, "🐝 Bạn chưa liên kết tài khoản. Vui lòng gửi mã `BEE-XXXXXX` từ website để xác thực nhé!", { parse_mode: 'Markdown' });
+                return;
+            }
+
+            const user = users[0];
+            const [[planCount]] = await db.execute('SELECT COUNT(*) AS c FROM plans WHERE user_id = ?', [user.id]);
+            const [[taskCount]] = await db.execute('SELECT COUNT(*) AS c FROM tasks WHERE user_id = ?', [user.id]);
+            const [[habitCount]] = await db.execute('SELECT COUNT(*) AS c FROM habits WHERE user_id = ?', [user.id]);
+
+            const text = `🐝 *Bee đang đọc dữ liệu từ tài khoản:*\n` +
+                `\`\`\`\n` +
+                `ID: ${user.id}\n` +
+                `Tên: ${user.full_name || 'N/A'}\n` +
+                `User: @${user.username}\n` +
+                `Email: ${user.email}\n` +
+                `\`\`\`\n` +
+                `📌 Tổng dữ liệu hiện có:\n` +
+                `- Plans: *${planCount.c}*\n` +
+                `- Tasks: *${taskCount.c}*\n` +
+                `- Habits: *${habitCount.c}*`;
+
+            await bot.sendMessage(chatId, text, { parse_mode: 'Markdown' });
+        } catch (e) {
+            console.error('WhoAmI Error:', e);
+            bot.sendMessage(chatId, "Bee không lấy được thông tin tài khoản lúc này. Bạn thử lại sau nhé! 🐝", { parse_mode: 'Markdown' });
+        }
+    });
+
+    bot.onText(/\/relink/, async (msg) => {
+        const chatId = msg.chat.id;
+        try {
+            const [result] = await db.execute(
+                'UPDATE users SET telegram_chat_id = NULL WHERE telegram_chat_id = ?',
+                [chatId]
+            );
+
+            const changed = result && typeof result.affectedRows === 'number' ? result.affectedRows : 0;
+            const note = changed > 0
+                ? "✅ Bee đã gỡ liên kết Telegram hiện tại. Giờ bạn hãy gửi lại mã `BEE-XXXXXX` từ website để liên kết đúng tài khoản nhé! 🐝"
+                : "🐝 Telegram này hiện chưa liên kết tài khoản nào. Bạn chỉ cần gửi mã `BEE-XXXXXX` từ website để bắt đầu nhé!";
+
+            await bot.sendMessage(chatId, note, { parse_mode: 'Markdown' });
+        } catch (e) {
+            console.error('Relink Error:', e);
+            bot.sendMessage(chatId, "Bee không gỡ liên kết được lúc này. Bạn thử lại sau nhé! 🐝", { parse_mode: 'Markdown' });
+        }
+    });
+
     bot.on('message', async (msg) => {
         const chatId = msg.chat.id;
         const text = msg.text;

@@ -155,7 +155,7 @@ const isScheduleOverviewQuery = (message) => {
     const hasScheduleIntent = /viec\s*can\s*lam|ke\s*hoach|lich|cong\s*viec|task|plan/i.test(text);
 
     // Only treat as "overview" when user is asking to view/list, not edit.
-    const hasViewVerb = /\b(xem|liet\s*ke|tong\s*hop|nhac|co\s*gi|hom\s*nay\s*(lam|co)\s*gi|today\s*(schedule|plan)|show|list|overview)\b/i.test(text);
+    const hasViewVerb = /\b(xem|liet\s*ke|tong\s*hop|nhac|co\s*gi|cho\s*biet|kiem\s*tra|tra\s*cuu|tra\s*c(u|ứ)u|xem\s*lich|xem\s*lich\s*trinh|lich\s*trinh|hom\s*nay\s*(lam|co)\s*gi|today\s*(schedule|plan)|show|list|overview)\b/i.test(text);
 
     if (isScheduleModificationRequest(message)) return false;
     return hasDateRef && hasScheduleIntent && hasViewVerb;
